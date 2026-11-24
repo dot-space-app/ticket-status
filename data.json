@@ -4,12 +4,12 @@
   "twitterUrl": "https://x.com/georye01?s=11",
   "formUrl": "",
   "notice": "• 공석 발생 시 트위터(X)에 실시간 공지 후 선착순으로 추가 접수를 진행합니다.\n• 카카오톡 개인 메시지를 통한 별도의 대기 예약은 받지 않습니다.\n• 접수 전 2단계 인증 해지 여부를 꼭 확인해 주세요.",
-  "updatedAt": "11/24 22:09 업데이트",
+  "updatedAt": "11/24 22:11 업데이트",
   "concerts": [
     {
       "id": "c1",
       "title": "THE BOYZ CONCERT : ZENERATION Ⅲ",
-      "platform": "예매처 확인 중",
+      "platform": "멜론티켓",
       "rounds": "1회차 · 2회차 · 3회차",
       "presale": "closed",
       "general": "open",
@@ -18,7 +18,7 @@
     {
       "id": "c2",
       "title": "2027 ATEEZ WORLD TOUR [ZERO TO ALL] IN INCHEON",
-      "platform": "예매처 확인 중",
+      "platform": "야놀자",
       "rounds": "1회차 · 2회차",
       "presale": "open",
       "general": "pending",
@@ -27,7 +27,7 @@
     {
       "id": "c3",
       "title": "TAEYEON CONCERT - F.L.Y. in Seoul",
-      "platform": "예매처 확인 중",
+      "platform": "멜론티켓",
       "rounds": "1회차 · 2회차 · 3회차",
       "presale": "open",
       "general": "pending",
