@@ -1,0 +1,37 @@
+{
+  "siteTitle": "대리티켓팅 진행 현황",
+  "kakaoUrl": "",
+  "twitterUrl": "",
+  "formUrl": "",
+  "notice": "• 공석 발생 시 트위터(X)에 실시간 공지 후 선착순으로 추가 접수를 진행합니다.\n• 카카오톡 개인 메시지를 통한 별도의 대기 예약은 받지 않습니다.\n• 접수 전 2단계 인증 해지 여부를 꼭 확인해 주세요.",
+  "updatedAt": "11/24 21:13 업데이트",
+  "concerts": [
+    {
+      "id": "c1",
+      "title": "THE BOYZ CONCERT : ZENERATION Ⅲ",
+      "platform": "예매처 확인 중",
+      "rounds": "1회차 · 2회차 · 3회차",
+      "presale": "closed",
+      "general": "open",
+      "note": "선예매·일반예매 모두 현재 접수 가능합니다."
+    },
+    {
+      "id": "c2",
+      "title": "2027 ATEEZ WORLD TOUR [ZERO TO ALL] IN INCHEON",
+      "platform": "예매처 확인 중",
+      "rounds": "1회차 · 2회차",
+      "presale": "open",
+      "general": "wait",
+      "note": "선예매 마감 / 일반예매 공석 발생 시 X(트위터) 실시간 공지"
+    },
+    {
+      "id": "c3",
+      "title": "TAEYEON CONCERT - F.L.Y. in Seoul",
+      "platform": "예매처 확인 중",
+      "rounds": "1회차 · 2회차 · 3회차",
+      "presale": "open",
+      "general": "closed",
+      "note": "전 회차 접수 마감되었습니다."
+    }
+  ]
+}
