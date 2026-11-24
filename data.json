@@ -4,7 +4,7 @@
   "twitterUrl": "https://x.com/georye01?s=11",
   "formUrl": "",
   "notice": "• 공석 발생 시 트위터(X)에 실시간 공지 후 선착순으로 추가 접수를 진행합니다.\n• 카카오톡 개인 메시지를 통한 별도의 대기 예약은 받지 않습니다.\n• 접수 전 2단계 인증 해지 여부를 꼭 확인해 주세요.",
-  "updatedAt": "11/24 21:15 업데이트",
+  "updatedAt": "11/24 21:56 업데이트",
   "concerts": [
     {
       "id": "c1",
@@ -32,6 +32,15 @@
       "presale": "open",
       "general": "closed",
       "note": ""
+    },
+    {
+      "id": "c_1795525008834",
+      "title": "Stray Kids World Tour <RUN IT SEOUL SPECIAL>",
+      "platform": "예매처 확인 중",
+      "rounds": "1회차 · 2회차",
+      "presale": "none",
+      "general": "none",
+      "note": "접수 대기 중 상세 예매페이지 오픈 시 바로 모집 예정"
     }
   ]
 }
