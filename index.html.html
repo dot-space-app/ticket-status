@@ -1,0 +1,1263 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>대리티켓팅 진행 현황</title>
+  <script src="https://cdn.tailwindcss.com/3.4.17"></script>
+  <script src="https://unpkg.com/lucide@0.460.0/dist/umd/lucide.min.js"></script>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Noto+Sans+KR:wght@400;500;600;700;800&display=swap');
+    body {
+      font-family: 'Noto Sans KR', 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+      -webkit-font-smoothing: antialiased;
+      background-color: #f8fafc;
+      color: #0f172a;
+    }
+    .status-dot-pulse {
+      animation: pulse-ring 1.8s cubic-bezier(0.215, 0.61, 0.355, 1) infinite;
+    }
+    @keyframes pulse-ring {
+      0% { transform: scale(0.85); opacity: 0.9; }
+      70% { transform: scale(1.65); opacity: 0; }
+      100% { transform: scale(1.65); opacity: 0; }
+    }
+    .toast-enter {
+      animation: slideUpFade 0.25s ease-out forwards;
+    }
+    @keyframes slideUpFade {
+      from { opacity: 0; transform: translate(-50%, 14px); }
+      to { opacity: 1; transform: translate(-50%, 0); }
+    }
+  </style>
+</head>
+<body class="min-h-screen flex flex-col">
+  <!-- Top Bar (Clean customer view — no admin button shown here) -->
+  <header class="sticky top-0 z-30 bg-white/90 backdrop-blur-md border-b border-slate-200/80">
+    <div class="max-w-3xl mx-auto px-4 sm:px-6 h-16 flex items-center justify-between gap-3">
+      <div class="flex items-center gap-2.5 min-w-0">
+        <div class="w-9 h-9 rounded-xl bg-indigo-600 text-white flex items-center justify-center shrink-0 shadow-sm">
+          <i data-lucide="ticket" class="w-5 h-5"></i>
+        </div>
+        <div class="min-w-0">
+          <h1 id="headerTitle" class="text-base sm:text-lg font-extrabold tracking-tight text-slate-900 truncate">대리티켓팅 진행 현황</h1>
+          <p id="lastUpdatedText" class="text-[11px] sm:text-xs text-slate-500 truncate">실시간 현황 확인</p>
+        </div>
+      </div>
+
+      <div class="flex items-center gap-2 shrink-0">
+        <button id="refreshDataBtn" type="button" class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold text-slate-600 bg-slate-100 hover:bg-slate-200 transition" title="최신 현황 새로고침">
+          <i data-lucide="refresh-cw" class="w-3.5 h-3.5"></i>
+          <span>새로고침</span>
+        </button>
+        <button id="exitAdminHeaderBtn" type="button" class="hidden items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold bg-slate-900 text-white hover:bg-slate-800 transition">
+          <i data-lucide="eye" class="w-3.5 h-3.5"></i>
+          <span>고객 화면</span>
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <!-- Main Content -->
+  <main class="flex-1 max-w-3xl w-full mx-auto px-4 sm:px-6 py-5 sm:py-7 space-y-5">
+    <!-- Admin Mode Banner & Controls (Hidden from regular customers) -->
+    <section id="adminToolbar" class="hidden rounded-2xl bg-slate-900 text-white p-4 sm:p-5 shadow-lg space-y-4">
+      <div class="flex flex-wrap items-center justify-between gap-3">
+        <div class="flex items-center gap-2.5">
+          <span class="inline-flex items-center justify-center w-8 h-8 rounded-lg bg-indigo-500/20 text-indigo-300">
+            <i data-lucide="shield-check" class="w-4 h-4"></i>
+          </span>
+          <div>
+            <div class="flex items-center gap-2">
+              <p class="text-sm font-bold">관리자 수정 모드</p>
+              <span id="unsavedBadge" class="hidden px-2 py-0.5 rounded-full text-[10px] font-bold bg-amber-400 text-slate-900">미반영 수정 있음</span>
+            </div>
+            <p class="text-xs text-slate-300">상태 뱃지를 클릭해 바로 바꾸고 저장 버튼을 누르면 고객 화면에 반영됩니다.</p>
+          </div>
+        </div>
+        <div class="flex flex-wrap items-center gap-2">
+          <button id="openAddModalBtn" type="button" class="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-bold bg-indigo-500 hover:bg-indigo-400 text-white transition">
+            <i data-lucide="plus" class="w-3.5 h-3.5"></i>
+            공연 추가
+          </button>
+          <button id="openSettingsModalBtn" type="button" class="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-semibold bg-slate-800 hover:bg-slate-700 text-slate-100 border border-slate-700 transition">
+            <i data-lucide="link" class="w-3.5 h-3.5"></i>
+            링크 · 공지
+          </button>
+          <button id="publishGithubBtn" type="button" class="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-bold bg-emerald-500 hover:bg-emerald-400 text-slate-950 transition shadow-sm">
+            <i data-lucide="upload-cloud" class="w-3.5 h-3.5"></i>
+            <span id="publishGithubLabel">깃허브에 바로 반영</span>
+          </button>
+        </div>
+      </div>
+
+      <div class="flex flex-wrap items-center justify-between gap-2 pt-3 border-t border-slate-800 text-xs text-slate-400">
+        <div class="flex items-center gap-2 flex-wrap">
+          <span id="githubStatusBadge" class="inline-flex items-center gap-1.5">
+            <span class="w-2 h-2 rounded-full bg-amber-400"></span>
+            미리보기 테스트 모드 (깃허브 키 미연결)
+          </span>
+          <button id="openGithubAuthBtn" type="button" class="text-indigo-300 hover:text-indigo-200 underline underline-offset-2 font-semibold">깃허브 키 설정</button>
+        </div>
+        <div class="flex items-center gap-3">
+          <button id="exportHtmlBtn" type="button" class="text-slate-300 hover:text-white underline underline-offset-2 transition">index.html 다운로드</button>
+          <button id="resetDemoBtn" type="button" class="text-slate-400 hover:text-white underline underline-offset-2 transition">초기화</button>
+          <button id="logoutAdminBtn" type="button" class="text-rose-300 hover:text-rose-200 font-semibold transition">로그아웃</button>
+        </div>
+      </div>
+    </section>
+
+    <!-- Quick Channel Links (KakaoTalk, Twitter/X, Form) -->
+    <section class="grid grid-cols-2 sm:grid-cols-3 gap-2.5 sm:gap-3">
+      <button id="kakaoLinkBtn" type="button" class="group flex items-center justify-center gap-2.5 px-4 py-3.5 rounded-2xl bg-[#FEE500] hover:bg-[#F7DD00] text-[#191919] font-bold text-sm shadow-xs transition active:scale-[0.98] cursor-pointer">
+        <svg class="w-5 h-5 shrink-0" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+          <path d="M12 3C6.477 3 2 6.463 2 10.734c0 2.752 1.842 5.166 4.614 6.54-.203.758-.737 2.747-.844 3.175-.132.528.194.521.409.379.168-.111 2.681-1.82 3.767-2.556.665.095 1.352.145 2.054.145 5.523 0 10-3.463 10-7.683C22 6.463 17.523 3 12 3z"/>
+        </svg>
+        <span class="truncate">카카오톡 문의</span>
+        <i data-lucide="arrow-up-right" class="w-4 h-4 opacity-60 group-hover:translate-x-0.5 group-hover:-translate-y-0.5 transition shrink-0"></i>
+      </button>
+
+      <button id="twitterLinkBtn" type="button" class="group flex items-center justify-center gap-2.5 px-4 py-3.5 rounded-2xl bg-slate-900 hover:bg-slate-800 text-white font-bold text-sm shadow-xs transition active:scale-[0.98] cursor-pointer">
+        <svg class="w-4 h-4 shrink-0" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+          <path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"/>
+        </svg>
+        <span class="truncate">트위터(X) 공지</span>
+        <i data-lucide="arrow-up-right" class="w-4 h-4 opacity-70 group-hover:translate-x-0.5 group-hover:-translate-y-0.5 transition shrink-0"></i>
+      </button>
+
+      <button id="formLinkBtn" type="button" class="col-span-2 sm:col-span-1 group flex items-center justify-center gap-2 px-4 py-3.5 rounded-2xl bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-sm shadow-xs transition active:scale-[0.98] cursor-pointer">
+        <i data-lucide="clipboard-list" class="w-4 h-4 shrink-0"></i>
+        <span class="truncate">접수 양식 작성</span>
+        <i data-lucide="arrow-up-right" class="w-4 h-4 opacity-75 group-hover:translate-x-0.5 group-hover:-translate-y-0.5 transition shrink-0"></i>
+      </button>
+    </section>
+
+    <!-- Notice Card -->
+    <section id="noticeCard" class="rounded-2xl bg-white border border-slate-200/90 p-4 sm:p-5 shadow-xs">
+      <div class="flex items-start gap-3">
+        <div class="w-8 h-8 rounded-xl bg-amber-50 text-amber-600 flex items-center justify-center shrink-0 mt-0.5">
+          <i data-lucide="megaphone" class="w-4 h-4"></i>
+        </div>
+        <div class="min-w-0 flex-1">
+          <div class="flex items-center justify-between gap-2">
+            <h2 class="text-sm font-bold text-slate-900">안내 사항</h2>
+            <button id="editNoticeQuickBtn" type="button" class="hidden text-xs font-semibold text-indigo-600 hover:text-indigo-800">수정</button>
+          </div>
+          <p id="noticeText" class="mt-1.5 text-xs sm:text-sm text-slate-600 leading-relaxed whitespace-pre-line"></p>
+        </div>
+      </div>
+    </section>
+
+    <!-- Summary & Filter Bar -->
+    <section class="space-y-3">
+      <div class="grid grid-cols-3 gap-2.5">
+        <div class="rounded-2xl bg-white border border-emerald-200/80 p-3 sm:p-3.5 flex items-center justify-between">
+          <div>
+            <p class="text-[11px] sm:text-xs font-semibold text-emerald-700">접수 가능</p>
+            <p id="countOpen" class="text-xl sm:text-2xl font-extrabold text-slate-900 mt-0.5">0</p>
+          </div>
+          <span class="w-8 h-8 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center shrink-0">
+            <i data-lucide="check-circle-2" class="w-4 h-4"></i>
+          </span>
+        </div>
+        <div class="rounded-2xl bg-white border border-amber-200/80 p-3 sm:p-3.5 flex items-center justify-between">
+          <div>
+            <p class="text-[11px] sm:text-xs font-semibold text-amber-700">공석 대기</p>
+            <p id="countWait" class="text-xl sm:text-2xl font-extrabold text-slate-900 mt-0.5">0</p>
+          </div>
+          <span class="w-8 h-8 rounded-xl bg-amber-50 text-amber-600 flex items-center justify-center shrink-0">
+            <i data-lucide="clock" class="w-4 h-4"></i>
+          </span>
+        </div>
+        <div class="rounded-2xl bg-white border border-slate-200/90 p-3 sm:p-3.5 flex items-center justify-between">
+          <div>
+            <p class="text-[11px] sm:text-xs font-semibold text-slate-500">마감</p>
+            <p id="countClosed" class="text-xl sm:text-2xl font-extrabold text-slate-900 mt-0.5">0</p>
+          </div>
+          <span class="w-8 h-8 rounded-xl bg-slate-100 text-slate-500 flex items-center justify-center shrink-0">
+            <i data-lucide="lock" class="w-4 h-4"></i>
+          </span>
+        </div>
+      </div>
+
+      <!-- Filter Chips + Search -->
+      <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5">
+        <div id="filterTabs" class="flex items-center gap-1.5 overflow-x-auto pb-0.5">
+          <button type="button" data-filter="all" class="filter-btn px-3.5 py-1.5 rounded-full text-xs font-bold transition whitespace-nowrap bg-slate-900 text-white">전체</button>
+          <button type="button" data-filter="open" class="filter-btn px-3.5 py-1.5 rounded-full text-xs font-semibold transition whitespace-nowrap bg-white text-slate-600 border border-slate-200 hover:bg-slate-50">접수 가능</button>
+          <button type="button" data-filter="wait" class="filter-btn px-3.5 py-1.5 rounded-full text-xs font-semibold transition whitespace-nowrap bg-white text-slate-600 border border-slate-200 hover:bg-slate-50">공석 대기</button>
+          <button type="button" data-filter="closed" class="filter-btn px-3.5 py-1.5 rounded-full text-xs font-semibold transition whitespace-nowrap bg-white text-slate-600 border border-slate-200 hover:bg-slate-50">마감</button>
+        </div>
+
+        <div class="relative w-full sm:w-56">
+          <i data-lucide="search" class="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none"></i>
+          <input id="searchInput" type="text" placeholder="공연명·예매처 검색" class="w-full pl-9 pr-8 py-2 rounded-xl text-xs sm:text-sm bg-white border border-slate-200 focus:outline-none focus:ring-2 focus:ring-indigo-500/30 focus:border-indigo-500 transition" />
+          <button id="clearSearchBtn" type="button" class="hidden absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600">
+            <i data-lucide="x" class="w-3.5 h-3.5"></i>
+          </button>
+        </div>
+      </div>
+    </section>
+
+    <!-- Concert List -->
+    <section id="concertList" class="space-y-3" aria-live="polite"></section>
+
+    <!-- Empty State -->
+    <section id="emptyState" class="hidden rounded-2xl bg-white border border-dashed border-slate-300 p-10 text-center">
+      <div class="w-11 h-11 rounded-2xl bg-slate-100 text-slate-400 flex items-center justify-center mx-auto mb-3">
+        <i data-lucide="calendar-x" class="w-5 h-5"></i>
+      </div>
+      <p class="text-sm font-bold text-slate-700">조건에 맞는 공연이 없습니다</p>
+      <p class="text-xs text-slate-500 mt-1">다른 필터를 선택하거나 검색어를 지워보세요.</p>
+    </section>
+  </main>
+
+  <!-- Footer (Discreet lock button for admin login) -->
+  <footer class="mt-8 border-t border-slate-200/80 bg-white">
+    <div class="max-w-3xl mx-auto px-4 sm:px-6 py-4 flex items-center justify-between gap-2 text-xs text-slate-500">
+      <span>실시간 진행 현황판 · 문의는 카카오톡 또는 트위터(X)를 이용해 주세요.</span>
+      <button id="footerAdminLockBtn" type="button" class="p-1.5 rounded-lg text-slate-300 hover:text-slate-500 hover:bg-slate-100 transition" title="관리자 로그인">
+        <i data-lucide="lock" class="w-3.5 h-3.5"></i>
+      </button>
+    </div>
+  </footer>
+
+  <!-- Modal: Admin Key (GitHub Token) Login -->
+  <div id="adminAuthModal" class="hidden fixed inset-0 z-50 bg-slate-900/50 backdrop-blur-xs flex items-end sm:items-center justify-center p-0 sm:p-4">
+    <div class="bg-white w-full sm:max-w-md rounded-t-3xl sm:rounded-2xl shadow-2xl overflow-hidden max-h-[92vh] flex flex-col">
+      <div class="px-5 py-4 border-b border-slate-100 flex items-center justify-between">
+        <div class="flex items-center gap-2">
+          <span class="w-7 h-7 rounded-lg bg-slate-900 text-white flex items-center justify-center">
+            <i data-lucide="key-round" class="w-4 h-4"></i>
+          </span>
+          <h3 class="text-base font-extrabold text-slate-900">관리자 키 로그인</h3>
+        </div>
+        <button id="closeAdminAuthBtn" type="button" class="p-1.5 rounded-lg text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition">
+          <i data-lucide="x" class="w-5 h-5"></i>
+        </button>
+      </div>
+
+      <form id="adminAuthForm" class="p-5 space-y-4 overflow-y-auto">
+        <div class="rounded-xl bg-slate-50 border border-slate-200/80 p-3 text-xs text-slate-600 leading-relaxed">
+          발급받은 <b>깃허브 관리자 키(Personal Access Token)</b>를 입력하면, 여기서 수정·저장할 때 같은 주소로 고객 화면에 자동 반영됩니다. 키는 내 기기 브라우저에만 저장됩니다.
+        </div>
+
+        <div class="grid grid-cols-2 gap-2.5">
+          <div>
+            <label for="ghOwnerInput" class="block text-xs font-bold text-slate-700 mb-1">깃허브 아이디</label>
+            <input id="ghOwnerInput" type="text" placeholder="예: myid" class="w-full px-3 py-2 rounded-xl text-sm border border-slate-200 focus:outline-none focus:ring-2 focus:ring-indigo-500/30 focus:border-indigo-500" />
+          </div>
+          <div>
+            <label for="ghRepoInput" class="block text-xs font-bold text-slate-700 mb-1">저장소 이름</label>
+            <input id="ghRepoInput" type="text" placeholder="예: ticket-status" class="w-full px-3 py-2 rounded-xl text-sm border border-slate-200 focus:outline-none focus:ring-2 focus:ring-indigo-500/30 focus:border-indigo-500" />
+          </div>
+        </div>
+
+        <div>
+          <label for="ghTokenInput" class="block text-xs font-bold text-slate-700 mb-1">관리자 키 (GitHub Token)</label>
+          <input id="ghTokenInput" type="password" placeholder="github_pat_..." autocomplete="off" class="w-full px-3.5 py-2.5 rounded-xl text-sm border border-slate-200 focus:outline-none focus:ring-2 focus:ring-indigo-500/30 focus:border-indigo-500" />
+        </div>
+
+        <p id="authErrorMsg" class="hidden text-xs font-semibold text-rose-600"></p>
+
+        <div class="pt-1">
+          <button id="submitAuthBtn" type="submit" class="w-full py-2.5 rounded-xl text-sm font-bold text-white bg-slate-900 hover:bg-slate-800 transition">
+            관리자 키로 로그인
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Modal: Add / Edit Concert -->
+  <div id="concertModal" class="hidden fixed inset-0 z-50 bg-slate-900/50 backdrop-blur-xs flex items-end sm:items-center justify-center p-0 sm:p-4">
+    <div class="bg-white w-full sm:max-w-lg rounded-t-3xl sm:rounded-2xl shadow-2xl overflow-hidden max-h-[92vh] flex flex-col">
+      <div class="px-5 py-4 border-b border-slate-100 flex items-center justify-between">
+        <h3 id="concertModalTitle" class="text-base font-extrabold text-slate-900">공연 추가</h3>
+        <button id="closeConcertModalBtn" type="button" class="p-1.5 rounded-lg text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition">
+          <i data-lucide="x" class="w-5 h-5"></i>
+        </button>
+      </div>
+      <form id="concertForm" class="p-5 space-y-4 overflow-y-auto">
+        <input type="hidden" id="editConcertId" />
+
+        <div>
+          <label for="inputTitle" class="block text-xs font-bold text-slate-700 mb-1.5">공연명 *</label>
+          <input id="inputTitle" type="text" required placeholder="예: THE BOYZ CONCERT : ZENERATION Ⅲ" class="w-full px-3.5 py-2.5 rounded-xl text-sm border border-slate-200 focus:outline-none focus:ring-2 focus:ring-indigo-500/30 focus:border-indigo-500" />
+        </div>
+
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          <div>
+            <label for="inputPlatform" class="block text-xs font-bold text-slate-700 mb-1.5">예매처 (선택)</label>
+            <input id="inputPlatform" type="text" placeholder="예: 멜론티켓, 인터파크, YES24" class="w-full px-3.5 py-2.5 rounded-xl text-sm border border-slate-200 focus:outline-none focus:ring-2 focus:ring-indigo-500/30 focus:border-indigo-500" />
+          </div>
+          <div>
+            <label for="inputRounds" class="block text-xs font-bold text-slate-700 mb-1.5">회차 / 일정 (선택)</label>
+            <input id="inputRounds" type="text" placeholder="예: 1회차 · 2회차 · 3회차" class="w-full px-3.5 py-2.5 rounded-xl text-sm border border-slate-200 focus:outline-none focus:ring-2 focus:ring-indigo-500/30 focus:border-indigo-500" />
+          </div>
+        </div>
+
+        <div class="grid grid-cols-2 gap-3">
+          <div>
+            <label for="inputPresale" class="block text-xs font-bold text-slate-700 mb-1.5">선예매 상태</label>
+            <select id="inputPresale" class="w-full px-3 py-2.5 rounded-xl text-sm border border-slate-200 bg-white focus:outline-none focus:ring-2 focus:ring-indigo-500/30 focus:border-indigo-500">
+              <option value="open">접수 가능</option>
+              <option value="wait">공석 대기</option>
+              <option value="closed">마감</option>
+              <option value="none">해당 없음</option>
+            </select>
+          </div>
+          <div>
+            <label for="inputGeneral" class="block text-xs font-bold text-slate-700 mb-1.5">일반예매 상태</label>
+            <select id="inputGeneral" class="w-full px-3 py-2.5 rounded-xl text-sm border border-slate-200 bg-white focus:outline-none focus:ring-2 focus:ring-indigo-500/30 focus:border-indigo-500">
+              <option value="open">접수 가능</option>
+              <option value="wait">공석 대기</option>
+              <option value="closed">마감</option>
+              <option value="none">해당 없음</option>
+            </select>
+          </div>
+        </div>
+
+        <div>
+          <label for="inputNote" class="block text-xs font-bold text-slate-700 mb-1.5">한줄 안내 메모 (선택)</label>
+          <input id="inputNote" type="text" placeholder="예: 선예매 마감, 일반예매 공석 발생 시 트위터 공지" class="w-full px-3.5 py-2.5 rounded-xl text-sm border border-slate-200 focus:outline-none focus:ring-2 focus:ring-indigo-500/30 focus:border-indigo-500" />
+        </div>
+
+        <div class="pt-2 flex items-center justify-end gap-2">
+          <button id="cancelConcertModalBtn" type="button" class="px-4 py-2.5 rounded-xl text-sm font-semibold text-slate-600 bg-slate-100 hover:bg-slate-200 transition">취소</button>
+          <button type="submit" class="px-5 py-2.5 rounded-xl text-sm font-bold text-white bg-indigo-600 hover:bg-indigo-700 transition">적용</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Modal: Links & Notice Settings -->
+  <div id="settingsModal" class="hidden fixed inset-0 z-50 bg-slate-900/50 backdrop-blur-xs flex items-end sm:items-center justify-center p-0 sm:p-4">
+    <div class="bg-white w-full sm:max-w-lg rounded-t-3xl sm:rounded-2xl shadow-2xl overflow-hidden max-h-[92vh] flex flex-col">
+      <div class="px-5 py-4 border-b border-slate-100 flex items-center justify-between">
+        <h3 class="text-base font-extrabold text-slate-900">링크 및 공지 설정</h3>
+        <button id="closeSettingsModalBtn" type="button" class="p-1.5 rounded-lg text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition">
+          <i data-lucide="x" class="w-5 h-5"></i>
+        </button>
+      </div>
+
+      <form id="settingsForm" class="p-5 overflow-y-auto space-y-4">
+        <div>
+          <label for="settingSiteTitle" class="block text-xs font-bold text-slate-700 mb-1.5">사이트 제목</label>
+          <input id="settingSiteTitle" type="text" class="w-full px-3.5 py-2.5 rounded-xl text-sm border border-slate-200 focus:outline-none focus:ring-2 focus:ring-indigo-500/30 focus:border-indigo-500" />
+        </div>
+
+        <div>
+          <label for="settingKakaoUrl" class="block text-xs font-bold text-slate-700 mb-1.5">카카오톡 바로가기 링크 (오픈채팅 / 채널 URL)</label>
+          <input id="settingKakaoUrl" type="url" placeholder="https://open.kakao.com/o/..." class="w-full px-3.5 py-2.5 rounded-xl text-sm border border-slate-200 focus:outline-none focus:ring-2 focus:ring-indigo-500/30 focus:border-indigo-500" />
+        </div>
+
+        <div>
+          <label for="settingTwitterUrl" class="block text-xs font-bold text-slate-700 mb-1.5">트위터(X) 바로가기 링크</label>
+          <input id="settingTwitterUrl" type="url" placeholder="https://x.com/내아이디" class="w-full px-3.5 py-2.5 rounded-xl text-sm border border-slate-200 focus:outline-none focus:ring-2 focus:ring-indigo-500/30 focus:border-indigo-500" />
+        </div>
+
+        <div>
+          <label for="settingFormUrl" class="block text-xs font-bold text-slate-700 mb-1.5">접수 양식(구글 폼) 링크 (선택)</label>
+          <input id="settingFormUrl" type="url" placeholder="https://docs.google.com/forms/..." class="w-full px-3.5 py-2.5 rounded-xl text-sm border border-slate-200 focus:outline-none focus:ring-2 focus:ring-indigo-500/30 focus:border-indigo-500" />
+        </div>
+
+        <div>
+          <label for="settingNotice" class="block text-xs font-bold text-slate-700 mb-1.5">상단 안내 공지 문구</label>
+          <textarea id="settingNotice" rows="4" class="w-full px-3.5 py-2.5 rounded-xl text-sm border border-slate-200 focus:outline-none focus:ring-2 focus:ring-indigo-500/30 focus:border-indigo-500 leading-relaxed"></textarea>
+        </div>
+
+        <div class="pt-2 flex items-center justify-end gap-2 border-t border-slate-100">
+          <button id="cancelSettingsModalBtn" type="button" class="px-4 py-2.5 rounded-xl text-sm font-semibold text-slate-600 bg-slate-100 hover:bg-slate-200 transition">취소</button>
+          <button type="submit" class="px-5 py-2.5 rounded-xl text-sm font-bold text-white bg-indigo-600 hover:bg-indigo-700 transition">적용</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Modal: Delete Confirmation -->
+  <div id="deleteModal" class="hidden fixed inset-0 z-50 bg-slate-900/50 backdrop-blur-xs flex items-center justify-center p-4">
+    <div class="bg-white w-full max-w-sm rounded-2xl shadow-2xl p-5 space-y-4">
+      <div class="flex items-start gap-3">
+        <div class="w-9 h-9 rounded-xl bg-rose-50 text-rose-600 flex items-center justify-center shrink-0">
+          <i data-lucide="trash-2" class="w-4 h-4"></i>
+        </div>
+        <div>
+          <h3 class="text-sm font-extrabold text-slate-900">공연을 목록에서 삭제할까요?</h3>
+          <p id="deleteTargetName" class="text-xs text-slate-500 mt-1"></p>
+        </div>
+      </div>
+      <div class="flex items-center justify-end gap-2">
+        <button id="cancelDeleteBtn" type="button" class="px-3.5 py-2 rounded-xl text-xs font-semibold text-slate-600 bg-slate-100 hover:bg-slate-200 transition">취소</button>
+        <button id="confirmDeleteBtn" type="button" class="px-4 py-2 rounded-xl text-xs font-bold text-white bg-rose-600 hover:bg-rose-700 transition">삭제</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Toast Container -->
+  <div id="toast" class="hidden fixed bottom-6 left-1/2 -translate-x-1/2 z-50 px-4 py-2.5 rounded-xl bg-slate-900 text-white text-xs sm:text-sm font-medium shadow-xl max-w-[90vw] text-center"></div>
+
+  <script>
+    // =========================================================================
+    // 기본 현황 데이터 (data.json이 아직 없을 때 표시되는 초기값)
+    // =========================================================================
+    const DEFAULT_STATE = /*__INITIAL_STATE_START__*/{
+      siteTitle: "대리티켓팅 진행 현황",
+      kakaoUrl: "",
+      twitterUrl: "",
+      formUrl: "",
+      notice: "• 공석 발생 시 트위터(X)에 실시간 공지 후 선착순으로 추가 접수를 진행합니다.\n• 카카오톡 개인 메시지를 통한 별도의 대기 예약은 받지 않습니다.\n• 접수 전 2단계 인증 해지 여부를 꼭 확인해 주세요.",
+      updatedAt: "방금 업데이트됨",
+      concerts: [
+        {
+          id: "c1",
+          title: "THE BOYZ CONCERT : ZENERATION Ⅲ",
+          platform: "예매처 확인 중",
+          rounds: "1회차 · 2회차 · 3회차",
+          presale: "open",
+          general: "open",
+          note: "선예매·일반예매 모두 현재 접수 가능합니다."
+        },
+        {
+          id: "c2",
+          title: "2027 ATEEZ WORLD TOUR [ZERO TO ALL] IN INCHEON",
+          platform: "예매처 확인 중",
+          rounds: "1회차 · 2회차",
+          presale: "closed",
+          general: "wait",
+          note: "선예매 마감 / 일반예매 공석 발생 시 X(트위터) 실시간 공지"
+        },
+        {
+          id: "c3",
+          title: "TAEYEON CONCERT - F.L.Y. in Seoul",
+          platform: "예매처 확인 중",
+          rounds: "1회차 · 2회차 · 3회차",
+          presale: "closed",
+          general: "closed",
+          note: "전 회차 접수 마감되었습니다."
+        }
+      ]
+    }/*__INITIAL_STATE_END__*/;
+
+    const STORAGE_KEY = "proxy_ticketing_status_v2";
+    const GH_AUTH_KEY = "proxy_ticketing_gh_auth_v1";
+
+    const STATUS_META = {
+      open: {
+        label: "접수 가능",
+        badgeClass: "bg-emerald-50 text-emerald-700 border-emerald-200",
+        dotClass: "bg-emerald-500",
+        pulse: true
+      },
+      wait: {
+        label: "공석 대기",
+        badgeClass: "bg-amber-50 text-amber-700 border-amber-200",
+        dotClass: "bg-amber-500",
+        pulse: false
+      },
+      closed: {
+        label: "마감",
+        badgeClass: "bg-slate-100 text-slate-500 border-slate-200",
+        dotClass: "bg-slate-400",
+        pulse: false
+      },
+      none: {
+        label: "해당 없음",
+        badgeClass: "bg-gray-50 text-gray-400 border-gray-200",
+        dotClass: "bg-gray-300",
+        pulse: false
+      }
+    };
+
+    const STATUS_CYCLE = ["open", "wait", "closed", "none"];
+
+    let state = loadLocalState();
+    let ghAuth = loadGhAuth();
+    let isAdmin = false;
+    let hasUnsavedChanges = false;
+    let activeFilter = "all";
+    let searchQuery = "";
+    let pendingDeleteId = null;
+    let toastTimer = null;
+
+    function cloneDefault() {
+      return JSON.parse(JSON.stringify(DEFAULT_STATE));
+    }
+
+    function detectGithubPagesRepo() {
+      try {
+        const host = window.location.hostname || "";
+        const pathParts = (window.location.pathname || "").split("/").filter(Boolean);
+        if (host.endsWith(".github.io")) {
+          const owner = host.replace(".github.io", "");
+          const repo = pathParts.length > 0 && !pathParts[0].endsWith(".html") ? pathParts[0] : `${owner}.github.io`;
+          return { owner, repo, isGithubPages: true };
+        }
+      } catch (e) {
+        // Ignore URL parsing issues
+      }
+      return { owner: "", repo: "", isGithubPages: false };
+    }
+
+    function loadLocalState() {
+      try {
+        const raw = localStorage.getItem(STORAGE_KEY);
+        if (raw) {
+          const parsed = JSON.parse(raw);
+          if (parsed && Array.isArray(parsed.concerts)) {
+            return { ...cloneDefault(), ...parsed };
+          }
+        }
+      } catch (e) {
+        // Fallback to default state
+      }
+      return cloneDefault();
+    }
+
+    function saveLocalState(markUnsaved = true) {
+      const now = new Date();
+      const pad = (n) => String(n).padStart(2, "0");
+      state.updatedAt = `${now.getMonth() + 1}/${now.getDate()} ${pad(now.getHours())}:${pad(now.getMinutes())} 업데이트`;
+      if (markUnsaved) hasUnsavedChanges = true;
+      try {
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+      } catch (e) {
+        // Ignore storage errors
+      }
+    }
+
+    function loadGhAuth() {
+      const detected = detectGithubPagesRepo();
+      try {
+        const raw = localStorage.getItem(GH_AUTH_KEY);
+        if (raw) {
+          const parsed = JSON.parse(raw);
+          return {
+            owner: parsed.owner || detected.owner || "",
+            repo: parsed.repo || detected.repo || "",
+            token: parsed.token || ""
+          };
+        }
+      } catch (e) {
+        // Ignore
+      }
+      return { owner: detected.owner || "", repo: detected.repo || "", token: "" };
+    }
+
+    function saveGhAuth(auth) {
+      ghAuth = auth;
+      try {
+        localStorage.setItem(GH_AUTH_KEY, JSON.stringify(auth));
+      } catch (e) {
+        // Ignore
+      }
+    }
+
+    function clearGhAuth() {
+      const detected = detectGithubPagesRepo();
+      ghAuth = { owner: detected.owner || "", repo: detected.repo || "", token: "" };
+      try {
+        localStorage.removeItem(GH_AUTH_KEY);
+      } catch (e) {
+        // Ignore
+      }
+    }
+
+    function hasGithubConnected() {
+      return Boolean(ghAuth.owner && ghAuth.repo && ghAuth.token);
+    }
+
+    function showToast(msg) {
+      const el = document.getElementById("toast");
+      el.textContent = msg;
+      el.classList.remove("hidden", "toast-enter");
+      void el.offsetWidth;
+      el.classList.add("toast-enter");
+      if (toastTimer) clearTimeout(toastTimer);
+      toastTimer = setTimeout(() => {
+        el.classList.add("hidden");
+      }, 3000);
+    }
+
+    function escapeHtml(str) {
+      return String(str || "")
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/"/g, "&quot;")
+        .replace(/'/g, "&#39;");
+    }
+
+    function utf8ToBase64(str) {
+      const bytes = new TextEncoder().encode(str);
+      let binary = "";
+      bytes.forEach((b) => { binary += String.fromCharCode(b); });
+      return btoa(binary);
+    }
+
+    function base64ToUtf8(b64) {
+      const binary = atob(b64.replace(/\s/g, ""));
+      const bytes = Uint8Array.from(binary, (c) => c.charCodeAt(0));
+      return new TextDecoder().decode(bytes);
+    }
+
+    // =========================================================================
+    // GitHub Pages Live Load & GitHub API Direct Publish (No Google Sheets!)
+    // =========================================================================
+    async function loadRemoteDataFromGithub(silent = true) {
+      const detected = detectGithubPagesRepo();
+      const owner = ghAuth.owner || detected.owner;
+      const repo = ghAuth.repo || detected.repo;
+
+      // Only fetch remotely when hosted on GitHub Pages or when GitHub auth is configured
+      if (!detected.isGithubPages && !hasGithubConnected()) {
+        if (!silent) showToast("최신 상태입니다.");
+        return false;
+      }
+
+      try {
+        let fetchedData = null;
+
+        // 1) If admin has token, read via GitHub API for zero-delay freshest data
+        if (hasGithubConnected()) {
+          const apiRes = await fetch(
+            `https://api.github.com/repos/${encodeURIComponent(owner)}/${encodeURIComponent(repo)}/contents/data.json?t=${Date.now()}`,
+            {
+              headers: {
+                Authorization: `Bearer ${ghAuth.token}`,
+                Accept: "application/vnd.github+json"
+              }
+            }
+          );
+          if (apiRes.ok) {
+            const meta = await apiRes.json();
+            if (meta && meta.content) {
+              fetchedData = JSON.parse(base64ToUtf8(meta.content));
+            }
+          }
+        }
+
+        // 2) Otherwise (customer view on GitHub Pages), fetch public data.json
+        if (!fetchedData && detected.isGithubPages) {
+          const dirPath = window.location.pathname.endsWith("/")
+            ? window.location.pathname
+            : window.location.pathname.replace(/[^/]*$/, "");
+          const dataUrl = `${window.location.origin}${dirPath}data.json?t=${Date.now()}`;
+          const res = await fetch(dataUrl, { cache: "no-store" });
+          if (res.ok) {
+            fetchedData = await res.json();
+          }
+        }
+
+        if (fetchedData && Array.isArray(fetchedData.concerts)) {
+          state = { ...cloneDefault(), ...fetchedData };
+          hasUnsavedChanges = false;
+          try { localStorage.setItem(STORAGE_KEY, JSON.stringify(state)); } catch (e) {}
+          render();
+          if (!silent) showToast("최신 현황을 불러왔습니다.");
+          return true;
+        }
+      } catch (err) {
+        if (!silent) showToast("최신 데이터를 불러오지 못했습니다. 잠시 후 다시 시도해 주세요.");
+      }
+      return false;
+    }
+
+    async function publishToGithub() {
+      if (!hasGithubConnected()) {
+        openAdminAuthModal();
+        showToast("먼저 깃허브 아이디·저장소·관리자 키를 입력해 주세요.");
+        return;
+      }
+
+      const btn = document.getElementById("publishGithubBtn");
+      const label = document.getElementById("publishGithubLabel");
+      btn.disabled = true;
+      label.textContent = "반영 중...";
+
+      try {
+        const apiUrl = `https://api.github.com/repos/${encodeURIComponent(ghAuth.owner)}/${encodeURIComponent(ghAuth.repo)}/contents/data.json`;
+        const headers = {
+          Authorization: `Bearer ${ghAuth.token}`,
+          Accept: "application/vnd.github+json",
+          "Content-Type": "application/json"
+        };
+
+        // Check existing data.json SHA (if it already exists)
+        let sha = null;
+        const getRes = await fetch(`${apiUrl}?t=${Date.now()}`, { headers });
+        if (getRes.ok) {
+          const existing = await getRes.json();
+          sha = existing.sha;
+        }
+
+        const now = new Date();
+        const pad = (n) => String(n).padStart(2, "0");
+        state.updatedAt = `${now.getMonth() + 1}/${now.getDate()} ${pad(now.getHours())}:${pad(now.getMinutes())} 업데이트`;
+
+        const body = {
+          message: `Update ticketing status (${state.updatedAt})`,
+          content: utf8ToBase64(JSON.stringify(state, null, 2))
+        };
+        if (sha) body.sha = sha;
+
+        const putRes = await fetch(apiUrl, {
+          method: "PUT",
+          headers,
+          body: JSON.stringify(body)
+        });
+
+        if (!putRes.ok) {
+          const errJson = await putRes.json().catch(() => ({}));
+          throw new Error(errJson.message || `HTTP ${putRes.status}`);
+        }
+
+        hasUnsavedChanges = false;
+        try { localStorage.setItem(STORAGE_KEY, JSON.stringify(state)); } catch (e) {}
+        render();
+        showToast("깃허브에 저장 완료! 약 20~30초 뒤 고객 화면에 자동 반영됩니다.");
+      } catch (err) {
+        showToast(`저장 실패: 관리자 키 권한(Contents: Read and write)과 저장소 이름을 확인해 주세요.`);
+      } finally {
+        btn.disabled = false;
+        label.textContent = "깃허브에 바로 반영";
+      }
+    }
+
+    function getConcertOverallCategory(c) {
+      if (c.presale === "open" || c.general === "open") return "open";
+      if (c.presale === "wait" || c.general === "wait") return "wait";
+      return "closed";
+    }
+
+    function renderStatusPill(concertId, field, statusKey) {
+      const meta = STATUS_META[statusKey] || STATUS_META.closed;
+      const dotHtml = meta.pulse
+        ? `<span class="relative flex h-2 w-2 shrink-0"><span class="status-dot-pulse absolute inline-flex h-full w-full rounded-full ${meta.dotClass}"></span><span class="relative inline-flex rounded-full h-2 w-2 ${meta.dotClass}"></span></span>`
+        : `<span class="inline-flex rounded-full h-2 w-2 shrink-0 ${meta.dotClass}"></span>`;
+
+      if (isAdmin) {
+        return `
+          <button type="button" data-action="cycle-status" data-id="${escapeHtml(concertId)}" data-field="${field}"
+            class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-bold border ${meta.badgeClass} hover:ring-2 hover:ring-indigo-400/50 transition cursor-pointer"
+            title="클릭하여 상태 변경">
+            ${dotHtml}
+            <span>${meta.label}</span>
+            <i data-lucide="chevron-down" class="w-3 h-3 opacity-60"></i>
+          </button>
+        `;
+      }
+      return `
+        <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-bold border ${meta.badgeClass}">
+          ${dotHtml}
+          <span>${meta.label}</span>
+        </span>
+      `;
+    }
+
+    function render() {
+      // Header & Notice
+      document.title = state.siteTitle || "대리티켓팅 진행 현황";
+      document.getElementById("headerTitle").textContent = state.siteTitle || "대리티켓팅 진행 현황";
+      document.getElementById("lastUpdatedText").textContent = state.updatedAt || "실시간 현황 확인";
+      document.getElementById("noticeText").textContent = state.notice || "등록된 공지가 없습니다.";
+
+      // Admin UI visibility
+      const adminToolbar = document.getElementById("adminToolbar");
+      const exitAdminHeaderBtn = document.getElementById("exitAdminHeaderBtn");
+      const editNoticeQuickBtn = document.getElementById("editNoticeQuickBtn");
+      const unsavedBadge = document.getElementById("unsavedBadge");
+      const githubStatusBadge = document.getElementById("githubStatusBadge");
+
+      if (isAdmin) {
+        adminToolbar.classList.remove("hidden");
+        exitAdminHeaderBtn.classList.remove("hidden");
+        exitAdminHeaderBtn.classList.add("inline-flex");
+        editNoticeQuickBtn.classList.remove("hidden");
+      } else {
+        adminToolbar.classList.add("hidden");
+        exitAdminHeaderBtn.classList.add("hidden");
+        exitAdminHeaderBtn.classList.remove("inline-flex");
+        editNoticeQuickBtn.classList.add("hidden");
+      }
+
+      unsavedBadge.classList.toggle("hidden", !hasUnsavedChanges);
+
+      if (hasGithubConnected()) {
+        githubStatusBadge.innerHTML = `<span class="w-2 h-2 rounded-full bg-emerald-400"></span> 깃허브 연결됨 (${escapeHtml(ghAuth.owner)}/${escapeHtml(ghAuth.repo)})`;
+      } else {
+        githubStatusBadge.innerHTML = `<span class="w-2 h-2 rounded-full bg-amber-400"></span> 미리보기 테스트 모드 (깃허브 키 미연결)`;
+      }
+
+      // Channel link tooltips
+      document.getElementById("kakaoLinkBtn").title = state.kakaoUrl || "카카오톡 문의 링크";
+      document.getElementById("twitterLinkBtn").title = state.twitterUrl || "트위터(X) 공지 링크";
+      document.getElementById("formLinkBtn").title = state.formUrl || "접수 양식 링크";
+
+      // Counts
+      let openCount = 0;
+      let waitCount = 0;
+      let closedCount = 0;
+      state.concerts.forEach((c) => {
+        const cat = getConcertOverallCategory(c);
+        if (cat === "open") openCount++;
+        else if (cat === "wait") waitCount++;
+        else closedCount++;
+      });
+      document.getElementById("countOpen").textContent = openCount;
+      document.getElementById("countWait").textContent = waitCount;
+      document.getElementById("countClosed").textContent = closedCount;
+
+      // Filter & Search
+      const q = searchQuery.trim().toLowerCase();
+      const filtered = state.concerts.filter((c) => {
+        const cat = getConcertOverallCategory(c);
+        const matchesFilter = activeFilter === "all" || cat === activeFilter;
+        const matchesSearch =
+          !q ||
+          (c.title && c.title.toLowerCase().includes(q)) ||
+          (c.platform && c.platform.toLowerCase().includes(q)) ||
+          (c.rounds && c.rounds.toLowerCase().includes(q)) ||
+          (c.note && c.note.toLowerCase().includes(q));
+        return matchesFilter && matchesSearch;
+      });
+
+      const listEl = document.getElementById("concertList");
+      const emptyEl = document.getElementById("emptyState");
+
+      if (filtered.length === 0) {
+        listEl.innerHTML = "";
+        emptyEl.classList.remove("hidden");
+      } else {
+        emptyEl.classList.add("hidden");
+        listEl.innerHTML = filtered
+          .map((c) => {
+            const cat = getConcertOverallCategory(c);
+            const accentBorder =
+              cat === "open"
+                ? "border-l-4 border-l-emerald-500"
+                : cat === "wait"
+                ? "border-l-4 border-l-amber-400"
+                : "border-l-4 border-l-slate-300";
+
+            const metaTags = [];
+            if (c.platform) {
+              metaTags.push(`<span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-slate-100 text-slate-600 text-[11px] font-semibold">${escapeHtml(c.platform)}</span>`);
+            }
+            if (c.rounds) {
+              metaTags.push(`<span class="inline-flex items-center gap-1 text-xs text-slate-500"><i data-lucide="calendar" class="w-3.5 h-3.5 text-slate-400"></i>${escapeHtml(c.rounds)}</span>`);
+            }
+
+            const adminControls = isAdmin
+              ? `
+                <div class="flex items-center gap-1 shrink-0">
+                  <button type="button" data-action="move-up" data-id="${escapeHtml(c.id)}" class="p-1.5 rounded-lg text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition" title="위로 이동">
+                    <i data-lucide="arrow-up" class="w-4 h-4"></i>
+                  </button>
+                  <button type="button" data-action="move-down" data-id="${escapeHtml(c.id)}" class="p-1.5 rounded-lg text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition" title="아래로 이동">
+                    <i data-lucide="arrow-down" class="w-4 h-4"></i>
+                  </button>
+                  <button type="button" data-action="edit" data-id="${escapeHtml(c.id)}" class="p-1.5 rounded-lg text-indigo-600 hover:bg-indigo-50 transition" title="공연 수정">
+                    <i data-lucide="pencil" class="w-4 h-4"></i>
+                  </button>
+                  <button type="button" data-action="delete" data-id="${escapeHtml(c.id)}" class="p-1.5 rounded-lg text-rose-500 hover:bg-rose-50 transition" title="공연 삭제">
+                    <i data-lucide="trash-2" class="w-4 h-4"></i>
+                  </button>
+                </div>
+              `
+              : "";
+
+            const actionFooter =
+              !isAdmin && cat === "open"
+                ? `
+                  <div class="pt-3 mt-3 border-t border-slate-100 flex flex-wrap items-center justify-between gap-2">
+                    <span class="text-xs text-emerald-700 font-medium">현재 대리티켓팅 신청이 가능합니다</span>
+                    <button type="button" data-action="quick-inquire" class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold bg-indigo-600 hover:bg-indigo-700 text-white transition">
+                      문의 · 접수하기
+                      <i data-lucide="arrow-right" class="w-3.5 h-3.5"></i>
+                    </button>
+                  </div>
+                `
+                : "";
+
+            return `
+              <article class="rounded-2xl bg-white border border-slate-200/90 ${accentBorder} p-4 sm:p-5 shadow-xs hover:shadow-sm transition">
+                <div class="flex items-start justify-between gap-3">
+                  <div class="min-w-0 space-y-1.5">
+                    <h3 class="text-sm sm:text-base font-extrabold text-slate-900 leading-snug break-words">${escapeHtml(c.title)}</h3>
+                    ${metaTags.length ? `<div class="flex flex-wrap items-center gap-2">${metaTags.join("")}</div>` : ""}
+                  </div>
+                  ${adminControls}
+                </div>
+
+                <div class="mt-4 grid grid-cols-2 gap-2.5">
+                  <div class="rounded-xl bg-slate-50/90 border border-slate-100 px-3 py-2.5 flex items-center justify-between gap-2">
+                    <span class="text-xs font-bold text-slate-600 shrink-0">선예매</span>
+                    ${renderStatusPill(c.id, "presale", c.presale)}
+                  </div>
+                  <div class="rounded-xl bg-slate-50/90 border border-slate-100 px-3 py-2.5 flex items-center justify-between gap-2">
+                    <span class="text-xs font-bold text-slate-600 shrink-0">일반예매</span>
+                    ${renderStatusPill(c.id, "general", c.general)}
+                  </div>
+                </div>
+
+                ${c.note ? `<p class="mt-3 text-xs text-slate-500 flex items-start gap-1.5 leading-relaxed"><i data-lucide="info" class="w-3.5 h-3.5 text-slate-400 shrink-0 mt-0.5"></i><span>${escapeHtml(c.note)}</span></p>` : ""}
+                ${actionFooter}
+              </article>
+            `;
+          })
+          .join("");
+      }
+
+      if (window.lucide && typeof window.lucide.createIcons === "function") {
+        window.lucide.createIcons();
+      }
+    }
+
+    // Export Deployable HTML
+    function exportDeployableHtml() {
+      const currentHtml = "<!DOCTYPE html>\n" + document.documentElement.outerHTML;
+      const serialized = JSON.stringify(state, null, 2);
+      const updatedHtml = currentHtml.replace(
+        /\/\*__INITIAL_STATE_START__\*\/[\s\S]*?\/\*__INITIAL_STATE_END__\*\//,
+        `/*__INITIAL_STATE_START__*/${serialized}/*__INITIAL_STATE_END__*/`
+      );
+      const blob = new Blob([updatedHtml], { type: "text/html;charset=utf-8" });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = "index.html";
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+      showToast("깃허브 업로드용 index.html 파일을 저장했습니다!");
+    }
+
+    // =========================================================================
+    // Modals & Event Listeners
+    // =========================================================================
+    function openAdminAuthModal() {
+      const detected = detectGithubPagesRepo();
+      document.getElementById("ghOwnerInput").value = ghAuth.owner || detected.owner || "";
+      document.getElementById("ghRepoInput").value = ghAuth.repo || detected.repo || "";
+      document.getElementById("ghTokenInput").value = ghAuth.token || "";
+      document.getElementById("authErrorMsg").classList.add("hidden");
+      document.getElementById("adminAuthModal").classList.remove("hidden");
+    }
+
+    function closeAdminAuthModal() {
+      document.getElementById("adminAuthModal").classList.add("hidden");
+    }
+
+    document.getElementById("footerAdminLockBtn").addEventListener("click", () => {
+      if (isAdmin) {
+        isAdmin = false;
+        render();
+        showToast("고객 화면으로 전환되었습니다.");
+      } else if (hasGithubConnected()) {
+        isAdmin = true;
+        render();
+        showToast("저장된 관리자 키로 로그인되었습니다.");
+      } else {
+        openAdminAuthModal();
+      }
+    });
+
+    document.getElementById("exitAdminHeaderBtn").addEventListener("click", () => {
+      isAdmin = false;
+      render();
+      showToast("고객 화면으로 전환되었습니다.");
+    });
+
+    document.getElementById("logoutAdminBtn").addEventListener("click", () => {
+      clearGhAuth();
+      isAdmin = false;
+      render();
+      showToast("관리자 키가 기기에서 삭제되고 로그아웃되었습니다.");
+    });
+
+    document.getElementById("openGithubAuthBtn").addEventListener("click", openAdminAuthModal);
+    document.getElementById("closeAdminAuthBtn").addEventListener("click", closeAdminAuthModal);
+
+
+
+    document.getElementById("adminAuthForm").addEventListener("submit", async (e) => {
+      e.preventDefault();
+      const owner = document.getElementById("ghOwnerInput").value.trim();
+      const repo = document.getElementById("ghRepoInput").value.trim();
+      const token = document.getElementById("ghTokenInput").value.trim();
+      const errEl = document.getElementById("authErrorMsg");
+      const submitBtn = document.getElementById("submitAuthBtn");
+
+      if (!owner || !repo || !token) {
+        errEl.textContent = "깃허브 아이디, 저장소 이름, 관리자 키를 모두 입력해 주세요.";
+        errEl.classList.remove("hidden");
+        return;
+      }
+
+      submitBtn.disabled = true;
+      submitBtn.textContent = "연결 확인 중...";
+      errEl.classList.add("hidden");
+
+      try {
+        const res = await fetch(
+          `https://api.github.com/repos/${encodeURIComponent(owner)}/${encodeURIComponent(repo)}`,
+          {
+            headers: {
+              Authorization: `Bearer ${token}`,
+              Accept: "application/vnd.github+json"
+            }
+          }
+        );
+        if (!res.ok) {
+          throw new Error("저장소 또는 관리자 키를 확인해 주세요.");
+        }
+        const repoData = await res.json();
+        if (!repoData.permissions || !repoData.permissions.push) {
+          throw new Error("이 저장소의 수정(Contents 쓰기) 권한이 없는 키입니다.");
+        }
+        saveGhAuth({ owner, repo, token });
+        closeAdminAuthModal();
+        isAdmin = true;
+        render();
+        await loadRemoteDataFromGithub(true);
+        showToast("깃허브 관리자 연결 완료! 수정 후 '깃허브에 바로 반영'을 누르세요.");
+      } catch (err) {
+        errEl.textContent = err && err.message ? err.message : "로그인 실패: 아이디·저장소 이름 또는 관리자 키를 확인해 주세요.";
+        errEl.classList.remove("hidden");
+      } finally {
+        submitBtn.disabled = false;
+        submitBtn.textContent = "관리자 키로 로그인";
+      }
+    });
+
+    document.getElementById("publishGithubBtn").addEventListener("click", publishToGithub);
+    document.getElementById("refreshDataBtn").addEventListener("click", () => loadRemoteDataFromGithub(false));
+    document.getElementById("exportHtmlBtn").addEventListener("click", exportDeployableHtml);
+
+    // Channel link clicks
+    function handleChannelClick(url, label) {
+      if (url && url.trim()) {
+        window.open(url.trim(), "_blank", "noopener,noreferrer");
+      } else if (isAdmin) {
+        openSettingsModal();
+        showToast(`${label} 링크를 입력해 주세요.`);
+      } else {
+        showToast(`${label} 링크가 아직 등록되지 않았습니다.`);
+      }
+    }
+
+    document.getElementById("kakaoLinkBtn").addEventListener("click", () => handleChannelClick(state.kakaoUrl, "카카오톡"));
+    document.getElementById("twitterLinkBtn").addEventListener("click", () => handleChannelClick(state.twitterUrl, "트위터(X)"));
+    document.getElementById("formLinkBtn").addEventListener("click", () => handleChannelClick(state.formUrl, "접수 양식"));
+
+    // Filter tabs
+    document.getElementById("filterTabs").addEventListener("click", (e) => {
+      const btn = e.target.closest(".filter-btn");
+      if (!btn) return;
+      activeFilter = btn.dataset.filter;
+      document.querySelectorAll(".filter-btn").forEach((el) => {
+        const active = el.dataset.filter === activeFilter;
+        el.className = active
+          ? "filter-btn px-3.5 py-1.5 rounded-full text-xs font-bold transition whitespace-nowrap bg-slate-900 text-white"
+          : "filter-btn px-3.5 py-1.5 rounded-full text-xs font-semibold transition whitespace-nowrap bg-white text-slate-600 border border-slate-200 hover:bg-slate-50";
+      });
+      render();
+    });
+
+    // Search
+    const searchInput = document.getElementById("searchInput");
+    const clearSearchBtn = document.getElementById("clearSearchBtn");
+    searchInput.addEventListener("input", () => {
+      searchQuery = searchInput.value;
+      clearSearchBtn.classList.toggle("hidden", !searchQuery);
+      render();
+    });
+    clearSearchBtn.addEventListener("click", () => {
+      searchQuery = "";
+      searchInput.value = "";
+      clearSearchBtn.classList.add("hidden");
+      render();
+    });
+
+    // Concert List Delegation
+    document.getElementById("concertList").addEventListener("click", (e) => {
+      const target = e.target.closest("[data-action]");
+      if (!target) return;
+      const action = target.dataset.action;
+      const id = target.dataset.id;
+
+      if (action === "cycle-status" && isAdmin) {
+        const field = target.dataset.field;
+        const item = state.concerts.find((c) => c.id === id);
+        if (!item) return;
+        const idx = STATUS_CYCLE.indexOf(item[field]);
+        item[field] = STATUS_CYCLE[(idx + 1) % STATUS_CYCLE.length];
+        saveLocalState(true);
+        render();
+        const fieldName = field === "presale" ? "선예매" : "일반예매";
+        showToast(`${fieldName} 상태 → '${STATUS_META[item[field]].label}'`);
+      } else if (action === "edit" && isAdmin) {
+        const item = state.concerts.find((c) => c.id === id);
+        if (item) openConcertModal(item);
+      } else if (action === "delete" && isAdmin) {
+        const item = state.concerts.find((c) => c.id === id);
+        if (item) {
+          pendingDeleteId = id;
+          document.getElementById("deleteTargetName").textContent = item.title;
+          document.getElementById("deleteModal").classList.remove("hidden");
+        }
+      } else if (action === "move-up" && isAdmin) {
+        const idx = state.concerts.findIndex((c) => c.id === id);
+        if (idx > 0) {
+          [state.concerts[idx - 1], state.concerts[idx]] = [state.concerts[idx], state.concerts[idx - 1]];
+          saveLocalState(true);
+          render();
+        }
+      } else if (action === "move-down" && isAdmin) {
+        const idx = state.concerts.findIndex((c) => c.id === id);
+        if (idx >= 0 && idx < state.concerts.length - 1) {
+          [state.concerts[idx + 1], state.concerts[idx]] = [state.concerts[idx], state.concerts[idx + 1]];
+          saveLocalState(true);
+          render();
+        }
+      } else if (action === "quick-inquire") {
+        if (state.formUrl) {
+          window.open(state.formUrl, "_blank", "noopener,noreferrer");
+        } else if (state.kakaoUrl) {
+          window.open(state.kakaoUrl, "_blank", "noopener,noreferrer");
+        } else {
+          showToast("상단의 카카오톡 또는 트위터(X)로 문의해 주세요.");
+        }
+      }
+    });
+
+    // Concert Add/Edit Modal
+    function openConcertModal(concert = null) {
+      document.getElementById("concertModalTitle").textContent = concert ? "공연 정보 수정" : "새 공연 추가";
+      document.getElementById("editConcertId").value = concert ? concert.id : "";
+      document.getElementById("inputTitle").value = concert ? concert.title : "";
+      document.getElementById("inputPlatform").value = concert ? concert.platform : "";
+      document.getElementById("inputRounds").value = concert ? concert.rounds : "";
+      document.getElementById("inputPresale").value = concert ? concert.presale : "open";
+      document.getElementById("inputGeneral").value = concert ? concert.general : "open";
+      document.getElementById("inputNote").value = concert ? concert.note : "";
+      document.getElementById("concertModal").classList.remove("hidden");
+    }
+
+    function closeConcertModal() {
+      document.getElementById("concertModal").classList.add("hidden");
+    }
+
+    document.getElementById("openAddModalBtn").addEventListener("click", () => openConcertModal(null));
+    document.getElementById("closeConcertModalBtn").addEventListener("click", closeConcertModal);
+    document.getElementById("cancelConcertModalBtn").addEventListener("click", closeConcertModal);
+
+    document.getElementById("concertForm").addEventListener("submit", (e) => {
+      e.preventDefault();
+      const id = document.getElementById("editConcertId").value;
+      const payload = {
+        id: id || "c_" + Date.now(),
+        title: document.getElementById("inputTitle").value.trim(),
+        platform: document.getElementById("inputPlatform").value.trim(),
+        rounds: document.getElementById("inputRounds").value.trim(),
+        presale: document.getElementById("inputPresale").value,
+        general: document.getElementById("inputGeneral").value,
+        note: document.getElementById("inputNote").value.trim()
+      };
+      if (!payload.title) return;
+
+      if (id) {
+        const idx = state.concerts.findIndex((c) => c.id === id);
+        if (idx >= 0) state.concerts[idx] = payload;
+        showToast("공연 정보가 수정되었습니다. '깃허브에 바로 반영'을 눌러 저장하세요.");
+      } else {
+        state.concerts.unshift(payload);
+        showToast("새 공연이 추가되었습니다. '깃허브에 바로 반영'을 눌러 저장하세요.");
+      }
+      saveLocalState(true);
+      closeConcertModal();
+      render();
+    });
+
+    // Settings Modal
+    function openSettingsModal() {
+      document.getElementById("settingSiteTitle").value = state.siteTitle || "";
+      document.getElementById("settingKakaoUrl").value = state.kakaoUrl || "";
+      document.getElementById("settingTwitterUrl").value = state.twitterUrl || "";
+      document.getElementById("settingFormUrl").value = state.formUrl || "";
+      document.getElementById("settingNotice").value = state.notice || "";
+      document.getElementById("settingsModal").classList.remove("hidden");
+    }
+
+    function closeSettingsModal() {
+      document.getElementById("settingsModal").classList.add("hidden");
+    }
+
+    document.getElementById("openSettingsModalBtn").addEventListener("click", openSettingsModal);
+    document.getElementById("editNoticeQuickBtn").addEventListener("click", openSettingsModal);
+    document.getElementById("closeSettingsModalBtn").addEventListener("click", closeSettingsModal);
+    document.getElementById("cancelSettingsModalBtn").addEventListener("click", closeSettingsModal);
+
+    document.getElementById("settingsForm").addEventListener("submit", (e) => {
+      e.preventDefault();
+      state.siteTitle = document.getElementById("settingSiteTitle").value.trim() || "대리티켓팅 진행 현황";
+      state.kakaoUrl = document.getElementById("settingKakaoUrl").value.trim();
+      state.twitterUrl = document.getElementById("settingTwitterUrl").value.trim();
+      state.formUrl = document.getElementById("settingFormUrl").value.trim();
+      state.notice = document.getElementById("settingNotice").value.trim();
+      saveLocalState(true);
+      closeSettingsModal();
+      render();
+      showToast("링크·공지가 적용되었습니다. '깃허브에 바로 반영'을 눌러 저장하세요.");
+    });
+
+    document.getElementById("resetDemoBtn").addEventListener("click", () => {
+      state = cloneDefault();
+      saveLocalState(true);
+      render();
+      showToast("기본 공연 목록으로 복원되었습니다.");
+    });
+
+    // Delete Modal
+    document.getElementById("cancelDeleteBtn").addEventListener("click", () => {
+      pendingDeleteId = null;
+      document.getElementById("deleteModal").classList.add("hidden");
+    });
+    document.getElementById("confirmDeleteBtn").addEventListener("click", () => {
+      if (pendingDeleteId) {
+        state.concerts = state.concerts.filter((c) => c.id !== pendingDeleteId);
+        pendingDeleteId = null;
+        saveLocalState(true);
+        render();
+        showToast("공연이 삭제되었습니다. '깃허브에 바로 반영'을 눌러 저장하세요.");
+      }
+      document.getElementById("deleteModal").classList.add("hidden");
+    });
+
+    // Close modals on backdrop click
+    ["adminAuthModal", "concertModal", "settingsModal", "deleteModal"].forEach((id) => {
+      document.getElementById(id).addEventListener("click", (e) => {
+        if (e.target.id === id) {
+          document.getElementById(id).classList.add("hidden");
+        }
+      });
+    });
+
+    // Init: check ?admin URL parameter & load remote GitHub data if deployed
+    (async function init() {
+      const params = new URLSearchParams(window.location.search);
+      if (params.has("admin")) {
+        if (hasGithubConnected()) {
+          isAdmin = true;
+        } else {
+          openAdminAuthModal();
+        }
+      }
+      render();
+      await loadRemoteDataFromGithub(true);
+    })();
+  </script>
+</body>
+</html>
