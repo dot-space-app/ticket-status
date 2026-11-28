@@ -11,11 +11,46 @@
     body {
       font-family: 'Noto Sans KR', 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
       -webkit-font-smoothing: antialiased;
-      background-color: #f8fafc;
+      background-color: #f6f7fb;
       color: #0f172a;
+    }
+    #formLinkBtn[hidden] { display: none; }
+    .status-filter {
+      min-width: 0;
+      min-height: 4.5rem;
+      display: flex;
+      flex-direction: column;
+      align-items: flex-start;
+      justify-content: center;
+      gap: .125rem;
+      padding: .625rem .375rem;
+      border: 1px solid #e2e8f0;
+      border-radius: .875rem;
+      color: var(--status-ink);
+      background: #fff;
+      transition: background-color .15s, border-color .15s;
+    }
+    .status-filter:hover, .status-filter[aria-pressed="true"] { background: var(--status-bg); }
+    .status-filter[aria-pressed="true"] { border-color: var(--status-ink); }
+    .status-filter:focus-visible, .all-filter:focus-visible {
+      outline: 2px solid #4f46e5;
+      outline-offset: 2px;
+    }
+    .status-filter[data-filter="open"] { --status-ink: #047857; --status-bg: #ecfdf5; }
+    .status-filter[data-filter="pending"] { --status-ink: #075985; --status-bg: #effaff; }
+    .status-filter[data-filter="wait"] { --status-ink: #92400e; --status-bg: #fffbeb; }
+    .status-filter[data-filter="closed"] { --status-ink: #475569; --status-bg: #f1f5f9; }
+    .all-filter[aria-pressed="true"] { color: #3730a3; background: #eef2ff; }
+    .notice-toggle::-webkit-details-marker { display: none; }
+    #noticeCard[open] .notice-chevron { transform: rotate(180deg); }
+    @media (min-width: 640px) {
+      .status-filter { min-height: 5rem; padding: .75rem 1rem; }
     }
     .status-dot-pulse {
       animation: pulse-ring 1.8s cubic-bezier(0.215, 0.61, 0.355, 1) infinite;
+    }
+    @media (prefers-reduced-motion: reduce) {
+      .status-dot-pulse { animation: none; }
     }
     @keyframes pulse-ring {
       0% { transform: scale(0.85); opacity: 0.9; }
@@ -34,7 +69,7 @@
 <body class="min-h-screen flex flex-col">
   <!-- Top Bar (Clean customer view — no admin button shown here) -->
   <header class="sticky top-0 z-30 bg-white/90 backdrop-blur-md border-b border-slate-200/80">
-    <div class="max-w-3xl mx-auto px-4 sm:px-6 h-16 flex items-center justify-between gap-3">
+    <div class="max-w-4xl mx-auto px-4 sm:px-6 min-h-16 flex items-center justify-between gap-3 py-2.5">
       <div class="flex items-center gap-2.5 min-w-0">
         <div class="w-9 h-9 rounded-xl bg-indigo-600 text-white flex items-center justify-center shrink-0 shadow-sm">
           <i data-lucide="ticket" class="w-5 h-5"></i>
@@ -46,9 +81,9 @@
       </div>
 
       <div class="flex items-center gap-2 shrink-0">
-        <button id="refreshDataBtn" type="button" class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold text-slate-600 bg-slate-100 hover:bg-slate-200 transition" title="최신 현황 새로고침">
+        <button id="refreshDataBtn" type="button" class="inline-flex min-h-11 min-w-11 items-center justify-center gap-1.5 px-2.5 sm:px-3 rounded-xl text-xs font-semibold text-slate-700 bg-slate-100 hover:bg-slate-200 transition" aria-label="새로고침" title="최신 현황 새로고침">
           <i data-lucide="refresh-cw" class="w-3.5 h-3.5"></i>
-          <span>새로고침</span>
+          <span class="hidden min-[360px]:inline">새로고침</span>
         </button>
         <button id="exitAdminHeaderBtn" type="button" class="hidden items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold bg-slate-900 text-white hover:bg-slate-800 transition">
           <i data-lucide="eye" class="w-3.5 h-3.5"></i>
@@ -59,7 +94,7 @@
   </header>
 
   <!-- Main Content -->
-  <main class="flex-1 max-w-3xl w-full mx-auto px-4 sm:px-6 py-5 sm:py-7 space-y-5">
+  <main class="flex flex-1 flex-col gap-4 sm:gap-5 max-w-4xl w-full mx-auto px-4 sm:px-6 py-4 sm:py-7">
     <!-- Admin Mode Banner & Controls (Hidden from regular customers) -->
     <section id="adminToolbar" class="hidden rounded-2xl bg-slate-900 text-white p-4 sm:p-5 shadow-lg space-y-4">
       <div class="flex flex-wrap items-center justify-between gap-3">
@@ -108,112 +143,83 @@
     </section>
 
     <!-- Quick Channel Links (KakaoTalk, Twitter/X, Form) -->
-    <section class="grid grid-cols-2 sm:grid-cols-3 gap-2.5 sm:gap-3">
-      <button id="kakaoLinkBtn" type="button" class="group flex items-center justify-center gap-2.5 px-4 py-3.5 rounded-2xl bg-[#FEE500] hover:bg-[#F7DD00] text-[#191919] font-bold text-sm shadow-xs transition active:scale-[0.98] cursor-pointer">
-        <svg class="w-5 h-5 shrink-0" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+    <section id="channelLinks" aria-label="문의 및 공지 채널" class="grid grid-cols-2 gap-2 sm:gap-3">
+      <button id="kakaoLinkBtn" type="button" class="group flex min-h-11 items-center justify-center gap-1.5 sm:gap-2.5 px-2 py-2 rounded-xl bg-[#FEE500] hover:bg-[#F7DD00] text-[#191919] font-bold text-xs sm:text-sm transition active:scale-[0.98]">
+        <svg class="w-4 h-4 shrink-0" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
           <path d="M12 3C6.477 3 2 6.463 2 10.734c0 2.752 1.842 5.166 4.614 6.54-.203.758-.737 2.747-.844 3.175-.132.528.194.521.409.379.168-.111 2.681-1.82 3.767-2.556.665.095 1.352.145 2.054.145 5.523 0 10-3.463 10-7.683C22 6.463 17.523 3 12 3z"/>
         </svg>
         <span class="truncate">카카오톡 문의</span>
         <i data-lucide="arrow-up-right" class="w-4 h-4 opacity-60 group-hover:translate-x-0.5 group-hover:-translate-y-0.5 transition shrink-0"></i>
       </button>
 
-      <button id="twitterLinkBtn" type="button" class="group flex items-center justify-center gap-2.5 px-4 py-3.5 rounded-2xl bg-slate-900 hover:bg-slate-800 text-white font-bold text-sm shadow-xs transition active:scale-[0.98] cursor-pointer">
+      <button id="twitterLinkBtn" type="button" aria-label="트위터(X) 공지" class="group flex min-h-11 items-center justify-center gap-1.5 sm:gap-2.5 px-2 py-2 rounded-xl bg-white border border-slate-200 hover:bg-slate-50 text-slate-900 font-bold text-xs sm:text-sm transition active:scale-[0.98]">
         <svg class="w-4 h-4 shrink-0" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
           <path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"/>
         </svg>
-        <span class="truncate">트위터(X) 공지</span>
+        <span>공지</span>
         <i data-lucide="arrow-up-right" class="w-4 h-4 opacity-70 group-hover:translate-x-0.5 group-hover:-translate-y-0.5 transition shrink-0"></i>
       </button>
 
-      <button id="formLinkBtn" type="button" class="col-span-2 sm:col-span-1 group flex items-center justify-center gap-2 px-4 py-3.5 rounded-2xl bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-sm shadow-xs transition active:scale-[0.98] cursor-pointer">
+      <button id="formLinkBtn" type="button" hidden class="col-span-2 sm:col-span-1 group flex min-h-11 items-center justify-center gap-2 px-3 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-xs sm:text-sm transition active:scale-[0.98]">
         <i data-lucide="clipboard-list" class="w-4 h-4 shrink-0"></i>
         <span class="truncate">접수 양식 작성</span>
         <i data-lucide="arrow-up-right" class="w-4 h-4 opacity-75 group-hover:translate-x-0.5 group-hover:-translate-y-0.5 transition shrink-0"></i>
       </button>
     </section>
 
-    <!-- Notice Card -->
-    <section id="noticeCard" class="rounded-2xl bg-white border border-slate-200/90 p-4 sm:p-5 shadow-xs">
-      <div class="flex items-start gap-3">
-        <div class="w-8 h-8 rounded-xl bg-amber-50 text-amber-600 flex items-center justify-center shrink-0 mt-0.5">
-          <i data-lucide="megaphone" class="w-4 h-4"></i>
-        </div>
-        <div class="min-w-0 flex-1">
-          <div class="flex items-center justify-between gap-2">
-            <h2 class="text-sm font-bold text-slate-900">안내 사항</h2>
-            <button id="editNoticeQuickBtn" type="button" class="hidden text-xs font-semibold text-indigo-600 hover:text-indigo-800">수정</button>
-          </div>
-          <p id="noticeText" class="mt-1.5 text-xs sm:text-sm text-slate-600 leading-relaxed whitespace-pre-line"></p>
-        </div>
-      </div>
-    </section>
-
     <!-- Summary & Filter Bar -->
-    <section class="space-y-3">
-      <div class="grid grid-cols-2 sm:grid-cols-4 gap-2.5">
-        <div class="rounded-2xl bg-white border border-emerald-200/80 p-3 sm:p-3.5 flex items-center justify-between">
-          <div>
-            <p class="text-[11px] sm:text-xs font-semibold text-emerald-700">접수 가능</p>
-            <p id="countOpen" class="text-xl sm:text-2xl font-extrabold text-slate-900 mt-0.5">0</p>
-          </div>
-          <span class="w-8 h-8 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center shrink-0">
-            <i data-lucide="check-circle-2" class="w-4 h-4"></i>
-          </span>
+    <section aria-labelledby="concertListTitle" class="space-y-2.5 sm:space-y-3">
+      <div id="filterTabs" role="group" aria-label="공연 상태 필터">
+        <div class="flex items-center justify-between gap-2 mb-2">
+          <h2 id="concertListTitle" class="text-lg sm:text-xl font-extrabold tracking-tight">공연별 접수 현황</h2>
+          <button type="button" data-filter="all" aria-pressed="true" class="all-filter min-h-11 px-3 rounded-xl text-xs font-bold text-slate-600 hover:bg-slate-100 transition">전체 공연</button>
         </div>
-        <div class="rounded-2xl bg-white border border-sky-200/80 p-3 sm:p-3.5 flex items-center justify-between">
-          <div>
-            <p class="text-[11px] sm:text-xs font-semibold text-sky-700">접수 대기중</p>
-            <p id="countPending" class="text-xl sm:text-2xl font-extrabold text-slate-900 mt-0.5">0</p>
-          </div>
-          <span class="w-8 h-8 rounded-xl bg-sky-50 text-sky-600 flex items-center justify-center shrink-0">
-            <i data-lucide="hourglass" class="w-4 h-4"></i>
-          </span>
-        </div>
-        <div class="rounded-2xl bg-white border border-amber-200/80 p-3 sm:p-3.5 flex items-center justify-between">
-          <div>
-            <p class="text-[11px] sm:text-xs font-semibold text-amber-700">공석 대기</p>
-            <p id="countWait" class="text-xl sm:text-2xl font-extrabold text-slate-900 mt-0.5">0</p>
-          </div>
-          <span class="w-8 h-8 rounded-xl bg-amber-50 text-amber-600 flex items-center justify-center shrink-0">
-            <i data-lucide="clock" class="w-4 h-4"></i>
-          </span>
-        </div>
-        <div class="rounded-2xl bg-white border border-slate-200/90 p-3 sm:p-3.5 flex items-center justify-between">
-          <div>
-            <p class="text-[11px] sm:text-xs font-semibold text-slate-500">마감</p>
-            <p id="countClosed" class="text-xl sm:text-2xl font-extrabold text-slate-900 mt-0.5">0</p>
-          </div>
-          <span class="w-8 h-8 rounded-xl bg-slate-100 text-slate-500 flex items-center justify-center shrink-0">
-            <i data-lucide="lock" class="w-4 h-4"></i>
-          </span>
-        </div>
-      </div>
-
-      <!-- Filter Chips + Search -->
-      <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5">
-        <div id="filterTabs" class="flex items-center gap-1.5 overflow-x-auto pb-0.5">
-          <button type="button" data-filter="all" class="filter-btn px-3.5 py-1.5 rounded-full text-xs font-bold transition whitespace-nowrap bg-slate-900 text-white">전체</button>
-          <button type="button" data-filter="open" class="filter-btn px-3.5 py-1.5 rounded-full text-xs font-semibold transition whitespace-nowrap bg-white text-slate-600 border border-slate-200 hover:bg-slate-50">접수 가능</button>
-          <button type="button" data-filter="pending" class="filter-btn px-3.5 py-1.5 rounded-full text-xs font-semibold transition whitespace-nowrap bg-white text-slate-600 border border-slate-200 hover:bg-slate-50">접수 대기중</button>
-          <button type="button" data-filter="wait" class="filter-btn px-3.5 py-1.5 rounded-full text-xs font-semibold transition whitespace-nowrap bg-white text-slate-600 border border-slate-200 hover:bg-slate-50">공석 대기</button>
-          <button type="button" data-filter="closed" class="filter-btn px-3.5 py-1.5 rounded-full text-xs font-semibold transition whitespace-nowrap bg-white text-slate-600 border border-slate-200 hover:bg-slate-50">마감</button>
-        </div>
-
-        <div class="relative w-full sm:w-56">
-          <i data-lucide="search" class="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none"></i>
-          <input id="searchInput" type="text" placeholder="공연명·예매처 검색" class="w-full pl-9 pr-8 py-2 rounded-xl text-xs sm:text-sm bg-white border border-slate-200 focus:outline-none focus:ring-2 focus:ring-indigo-500/30 focus:border-indigo-500 transition" />
-          <button id="clearSearchBtn" type="button" class="hidden absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600">
-            <i data-lucide="x" class="w-3.5 h-3.5"></i>
+        <div class="grid grid-cols-4 gap-1.5 sm:gap-3">
+          <button type="button" data-filter="open" aria-pressed="false" class="status-filter">
+            <span id="countOpen" class="text-xl sm:text-2xl font-extrabold leading-none tabular-nums">0</span>
+            <span class="text-[10px] min-[360px]:text-[11px] sm:text-xs font-bold break-keep">접수 가능</span>
+          </button>
+          <button type="button" data-filter="pending" aria-pressed="false" class="status-filter">
+            <span id="countPending" class="text-xl sm:text-2xl font-extrabold leading-none tabular-nums">0</span>
+            <span class="text-[10px] min-[360px]:text-[11px] sm:text-xs font-bold break-keep">접수 대기중</span>
+          </button>
+          <button type="button" data-filter="wait" aria-pressed="false" class="status-filter">
+            <span id="countWait" class="text-xl sm:text-2xl font-extrabold leading-none tabular-nums">0</span>
+            <span class="text-[10px] min-[360px]:text-[11px] sm:text-xs font-bold break-keep">공석 대기</span>
+          </button>
+          <button type="button" data-filter="closed" aria-pressed="false" class="status-filter">
+            <span id="countClosed" class="text-xl sm:text-2xl font-extrabold leading-none tabular-nums">0</span>
+            <span class="text-[10px] min-[360px]:text-[11px] sm:text-xs font-bold break-keep">마감</span>
           </button>
         </div>
+        <p class="mt-1.5 text-[11px] sm:text-xs text-slate-600">눌러서 필터링 · 한 공연이 여러 상태에 표시돼요.</p>
+      </div>
+      <div class="relative w-full">
+        <i data-lucide="search" class="w-4 h-4 text-slate-500 absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none"></i>
+        <input id="searchInput" type="text" aria-label="아티스트, 공연명, 예매처 검색" placeholder="공연명·아티스트 검색" class="w-full min-h-12 pl-9 pr-12 py-2 rounded-xl text-base sm:text-sm bg-white border border-slate-200 focus:outline-none focus:ring-2 focus:ring-indigo-500/30 focus:border-indigo-500 transition" />
+        <button id="clearSearchBtn" type="button" aria-label="검색어 지우기" class="hidden absolute right-0 top-0 h-full w-11 place-items-center text-slate-500 hover:text-slate-800">
+          <i data-lucide="x" class="w-4 h-4"></i>
+        </button>
       </div>
     </section>
 
+    <details id="noticeCard" class="rounded-2xl bg-white border border-slate-200/90">
+      <summary class="notice-toggle min-h-12 flex cursor-pointer list-none items-center gap-2.5 px-4 py-3 text-sm font-bold text-slate-800 rounded-2xl focus-visible:outline focus-visible:outline-2 focus-visible:outline-indigo-600">
+        <i data-lucide="megaphone" class="w-4 h-4 text-indigo-600"></i>
+        <span class="flex-1">접수 전 안내</span>
+        <i data-lucide="chevron-down" class="notice-chevron w-4 h-4 text-slate-500 transition-transform"></i>
+      </summary>
+      <div class="px-4 pb-4">
+        <p id="noticeText" class="text-xs sm:text-sm text-slate-600 leading-relaxed whitespace-pre-line"></p>
+        <button id="editNoticeQuickBtn" type="button" class="hidden mt-2 text-xs font-semibold text-indigo-600 hover:text-indigo-800">공지 수정</button>
+      </div>
+    </details>
+
     <!-- Concert List -->
-    <section id="concertList" class="space-y-3" aria-live="polite"></section>
+    <section id="concertList" class="empty:hidden space-y-3" aria-live="polite"></section>
 
     <!-- Empty State -->
-    <section id="emptyState" class="hidden rounded-2xl bg-white border border-dashed border-slate-300 p-10 text-center">
+    <section id="emptyState" class="hidden rounded-2xl bg-white border border-dashed border-slate-300 p-8 text-center" role="status">
       <div class="w-11 h-11 rounded-2xl bg-slate-100 text-slate-400 flex items-center justify-center mx-auto mb-3">
         <i data-lucide="calendar-x" class="w-5 h-5"></i>
       </div>
@@ -224,7 +230,7 @@
 
   <!-- Footer (Discreet lock button for admin login) -->
   <footer class="mt-8 border-t border-slate-200/80 bg-white">
-    <div class="max-w-3xl mx-auto px-4 sm:px-6 py-4 flex items-center justify-between gap-2 text-xs text-slate-500">
+    <div class="max-w-4xl mx-auto px-4 sm:px-6 py-4 flex items-center justify-between gap-2 text-xs text-slate-500">
       <span>실시간 진행 현황판 · 문의는 카카오톡 또는 트위터(X)를 이용해 주세요.</span>
       <button id="footerAdminLockBtn" type="button" class="p-1.5 rounded-lg text-slate-300 hover:text-slate-500 hover:bg-slate-100 transition" title="관리자 로그인">
         <i data-lucide="lock" class="w-3.5 h-3.5"></i>
@@ -295,6 +301,10 @@
           <label for="inputTitle" class="block text-xs font-bold text-slate-700 mb-1.5">공연명 *</label>
           <input id="inputTitle" type="text" required placeholder="예: THE BOYZ CONCERT : ZENERATION Ⅲ" class="w-full px-3.5 py-2.5 rounded-xl text-sm border border-slate-200 focus:outline-none focus:ring-2 focus:ring-indigo-500/30 focus:border-indigo-500" />
         </div>
+        <div>
+          <label for="inputSearchAliases" class="block text-xs font-bold text-slate-700 mb-1.5">아티스트 검색어 (선택)</label>
+          <input id="inputSearchAliases" type="text" placeholder="예: 태연, TAEYEON" class="w-full px-3.5 py-2.5 rounded-xl text-sm border border-slate-200 focus:outline-none focus:ring-2 focus:ring-indigo-500/30 focus:border-indigo-500" />
+        </div>
 
         <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
           <div>
@@ -329,6 +339,19 @@
             </select>
           </div>
         </div>
+
+        <fieldset class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          <legend class="mb-2 text-xs font-bold text-slate-700">접수 시작 일정 (한국시간, 선택)</legend>
+          <div>
+            <label for="inputPresaleOpensAt" class="block text-xs text-slate-700 mb-1.5">선예매 접수 시작</label>
+            <input id="inputPresaleOpensAt" type="datetime-local" class="w-full min-h-11 px-3 py-2 rounded-xl text-sm border border-slate-200 bg-white focus:outline-none focus:ring-2 focus:ring-indigo-500/30 focus:border-indigo-500" />
+          </div>
+          <div>
+            <label for="inputGeneralOpensAt" class="block text-xs text-slate-700 mb-1.5">일반예매 접수 시작</label>
+            <input id="inputGeneralOpensAt" type="datetime-local" class="w-full min-h-11 px-3 py-2 rounded-xl text-sm border border-slate-200 bg-white focus:outline-none focus:ring-2 focus:ring-indigo-500/30 focus:border-indigo-500" />
+          </div>
+          <p class="sm:col-span-2 text-xs text-slate-600">접수 대기 중인 예매에 표시됩니다. 비워두면 일정 미정으로 표시됩니다.</p>
+        </fieldset>
 
         <div>
           <label for="inputNote" class="block text-xs font-bold text-slate-700 mb-1.5">한줄 안내 메모 (선택)</label>
@@ -418,12 +441,13 @@
       kakaoUrl: "",
       twitterUrl: "",
       formUrl: "",
-      notice: "• 공석 발생 시 트위터(X)에 실시간 공지 후 선착순으로 추가 접수를 진행합니다.\n• 카카오톡 개인 메시지를 통한 별도의 대기 예약은 받지 않습니다.\n• 접수 전 2단계 인증 해지 여부를 꼭 확인해 주세요.",
+      notice: "• 공석 발생 시 트위터(X)에 실시간 공지 후 선착순으로 추가 접수를 진행합니다.\n• 카카오톡 개인 메시지를 통한 별도의 대기 예약은 받지 않습니다.\n• 계정의 비밀번호와 인증번호는 공유하지 마세요.",
       updatedAt: "방금 업데이트됨",
       concerts: [
         {
           id: "c1",
           title: "THE BOYZ CONCERT : ZENERATION Ⅲ",
+          searchAliases: "더보이즈, THE BOYZ",
           platform: "예매처 확인 중",
           rounds: "1회차 · 2회차 · 3회차",
           presale: "open",
@@ -433,6 +457,7 @@
         {
           id: "c2",
           title: "2027 ATEEZ WORLD TOUR [ZERO TO ALL] IN INCHEON",
+          searchAliases: "에이티즈, ATEEZ",
           platform: "예매처 확인 중",
           rounds: "1회차 · 2회차",
           presale: "closed",
@@ -442,6 +467,7 @@
         {
           id: "c3",
           title: "TAEYEON CONCERT - F.L.Y. in Seoul",
+          searchAliases: "태연, TAEYEON",
           platform: "예매처 확인 중",
           rounds: "1회차 · 2회차 · 3회차",
           presale: "closed",
@@ -488,6 +514,10 @@
     };
 
     const STATUS_CYCLE = ["open", "pending", "wait", "closed", "none"];
+    const BOOKING_TYPES = [["presale", "선예매"], ["general", "일반예매"]];
+    const REGISTRATION_TIME_FORMAT = new Intl.DateTimeFormat("ko-KR", {
+      timeZone: "Asia/Seoul", month: "long", day: "numeric", hour: "numeric", minute: "2-digit", hour12: true
+    });
 
     let state = loadLocalState();
     let ghAuth = loadGhAuth();
@@ -500,6 +530,17 @@
 
     function cloneDefault() {
       return JSON.parse(JSON.stringify(DEFAULT_STATE));
+    }
+
+    function restoreState(savedState) {
+      const restored = { ...cloneDefault(), ...savedState };
+      if (typeof restored.notice === "string") {
+        restored.notice = restored.notice.replace(
+          "접수 전 2단계 인증 해지 여부를 꼭 확인해 주세요.",
+          "계정의 비밀번호와 인증번호는 공유하지 마세요."
+        );
+      }
+      return restored;
     }
 
     function detectGithubPagesRepo() {
@@ -523,7 +564,7 @@
         if (raw) {
           const parsed = JSON.parse(raw);
           if (parsed && Array.isArray(parsed.concerts)) {
-            return { ...cloneDefault(), ...parsed };
+            return restoreState(parsed);
           }
         }
       } catch (e) {
@@ -606,6 +647,25 @@
         .replace(/'/g, "&#39;");
     }
 
+    function getPublicUrl(value) {
+      try {
+        const url = new URL(typeof value === "string" ? value.trim() : "");
+        return url.protocol === "https:" || url.protocol === "http:" ? url.href : "";
+      } catch {
+        return "";
+      }
+    }
+
+    function normalizeSearchText(value) {
+      return String(value || "").normalize("NFKC").toLowerCase().replace(/\s+/g, "");
+    }
+
+    function getRegistrationTime(value) {
+      if (!/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}$/.test(value)) return null;
+      const date = new Date(`${value}+09:00`);
+      return Number.isNaN(date.getTime()) ? null : date;
+    }
+
     function utf8ToBase64(str) {
       const bytes = new TextEncoder().encode(str);
       let binary = "";
@@ -668,7 +728,7 @@
         }
 
         if (fetchedData && Array.isArray(fetchedData.concerts)) {
-          state = { ...cloneDefault(), ...fetchedData };
+          state = restoreState(fetchedData);
           hasUnsavedChanges = false;
           try { localStorage.setItem(STORAGE_KEY, JSON.stringify(state)); } catch (e) {}
           render();
@@ -742,11 +802,8 @@
       }
     }
 
-    function getConcertOverallCategory(c) {
-      if (c.presale === "open" || c.general === "open") return "open";
-      if (c.presale === "pending" || c.general === "pending") return "pending";
-      if (c.presale === "wait" || c.general === "wait") return "wait";
-      return "closed";
+    function concertHasStatus(concert, status) {
+      return concert.presale === status || concert.general === status;
     }
 
     function renderStatusPill(concertId, field, statusKey) {
@@ -758,7 +815,7 @@
       if (isAdmin) {
         return `
           <button type="button" data-action="cycle-status" data-id="${escapeHtml(concertId)}" data-field="${field}"
-            class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-bold border ${meta.badgeClass} hover:ring-2 hover:ring-indigo-400/50 transition cursor-pointer"
+            class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-bold whitespace-nowrap border ${meta.badgeClass} hover:ring-2 hover:ring-indigo-400/50 transition cursor-pointer"
             title="클릭하여 상태 변경">
             ${dotHtml}
             <span>${meta.label}</span>
@@ -767,10 +824,26 @@
         `;
       }
       return `
-        <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-bold border ${meta.badgeClass}">
+        <span class="inline-flex w-fit items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-bold whitespace-nowrap border ${meta.badgeClass}">
           ${dotHtml}
           <span>${meta.label}</span>
         </span>
+      `;
+    }
+
+    function renderBookingStatus(concertId, booking) {
+      const { field, label, status, startsAt } = booking;
+      const schedule = startsAt
+        ? `<p class="mt-1.5 text-xs leading-snug text-slate-700">접수 시작 <time datetime="${startsAt.toISOString()}" class="font-semibold break-keep">${REGISTRATION_TIME_FORMAT.format(startsAt)}</time> <span class="sr-only">한국시간</span></p>`
+        : `<p class="mt-1.5 text-xs leading-snug text-slate-600">접수 일정 미정</p>`;
+      return `
+        <div class="min-w-0 rounded-xl bg-slate-50 border border-slate-100 p-2.5 sm:px-3.5 sm:py-3">
+          <div class="flex flex-col items-start gap-1.5 sm:flex-row sm:items-center sm:justify-between">
+            <span class="text-xs font-bold text-slate-700 whitespace-nowrap">${label}</span>
+            ${renderStatusPill(concertId, field, status)}
+          </div>
+          ${status === "pending" ? schedule : ""}
+        </div>
       `;
     }
 
@@ -808,39 +881,29 @@
         githubStatusBadge.innerHTML = `<span class="w-2 h-2 rounded-full bg-amber-400"></span> 미리보기 테스트 모드 (깃허브 키 미연결)`;
       }
 
-      // Channel link tooltips
-      document.getElementById("kakaoLinkBtn").title = state.kakaoUrl || "카카오톡 문의 링크";
-      document.getElementById("twitterLinkBtn").title = state.twitterUrl || "트위터(X) 공지 링크";
-      document.getElementById("formLinkBtn").title = state.formUrl || "접수 양식 링크";
+      const formUrl = getPublicUrl(state.formUrl);
+      const kakaoUrl = getPublicUrl(state.kakaoUrl);
+      const twitterUrl = getPublicUrl(state.twitterUrl);
+      const registrationUrl = formUrl || kakaoUrl;
+      const formLinkBtn = document.getElementById("formLinkBtn");
+      formLinkBtn.hidden = !formUrl;
+      document.getElementById("channelLinks").classList.toggle("sm:grid-cols-3", Boolean(formUrl));
+      document.getElementById("kakaoLinkBtn").title = kakaoUrl || "카카오톡 문의 링크";
+      document.getElementById("twitterLinkBtn").title = twitterUrl || "트위터(X) 공지 링크";
+      formLinkBtn.title = formUrl || "접수 양식 링크";
 
       // Counts
-      let openCount = 0;
-      let pendingCount = 0;
-      let waitCount = 0;
-      let closedCount = 0;
-      state.concerts.forEach((c) => {
-        const cat = getConcertOverallCategory(c);
-        if (cat === "open") openCount++;
-        else if (cat === "pending") pendingCount++;
-        else if (cat === "wait") waitCount++;
-        else closedCount++;
-      });
-      document.getElementById("countOpen").textContent = openCount;
-      document.getElementById("countPending").textContent = pendingCount;
-      document.getElementById("countWait").textContent = waitCount;
-      document.getElementById("countClosed").textContent = closedCount;
+      const counts = { open: "countOpen", pending: "countPending", wait: "countWait", closed: "countClosed" };
+      for (const [status, countId] of Object.entries(counts)) {
+        document.getElementById(countId).textContent = state.concerts.filter((c) => concertHasStatus(c, status)).length;
+      }
 
       // Filter & Search
-      const q = searchQuery.trim().toLowerCase();
+      const q = normalizeSearchText(searchQuery);
       const filtered = state.concerts.filter((c) => {
-        const cat = getConcertOverallCategory(c);
-        const matchesFilter = activeFilter === "all" || cat === activeFilter;
-        const matchesSearch =
-          !q ||
-          (c.title && c.title.toLowerCase().includes(q)) ||
-          (c.platform && c.platform.toLowerCase().includes(q)) ||
-          (c.rounds && c.rounds.toLowerCase().includes(q)) ||
-          (c.note && c.note.toLowerCase().includes(q));
+        const matchesFilter = activeFilter === "all" || concertHasStatus(c, activeFilter);
+        const searchableFields = [c.title, c.searchAliases, c.platform, c.rounds, c.note];
+        const matchesSearch = !q || searchableFields.some((value) => normalizeSearchText(value).includes(q));
         return matchesFilter && matchesSearch;
       });
 
@@ -854,15 +917,11 @@
         emptyEl.classList.add("hidden");
         listEl.innerHTML = filtered
           .map((c) => {
-            const cat = getConcertOverallCategory(c);
-            const accentBorder =
-              cat === "open"
-                ? "border-l-4 border-l-emerald-500"
-                : cat === "pending"
-                ? "border-l-4 border-l-sky-500"
-                : cat === "wait"
-                ? "border-l-4 border-l-amber-400"
-                : "border-l-4 border-l-slate-300";
+            const bookings = BOOKING_TYPES.map(([field, label]) => ({
+              field, label, status: c[field], startsAt: getRegistrationTime(c[`${field}OpensAt`])
+            }));
+            const openBookings = bookings.filter(({ status }) => status === "open").map(({ label }) => label);
+            const hasUnknownSchedule = bookings.some(({ status, startsAt }) => status === "pending" && !startsAt);
 
             const metaTags = [];
             if (c.platform) {
@@ -891,42 +950,33 @@
               `
               : "";
 
-            const actionFooter =
-              !isAdmin && cat === "open"
-                ? `
-                  <div class="pt-3 mt-3 border-t border-slate-100 flex flex-wrap items-center justify-between gap-2">
-                    <span class="text-xs text-emerald-700 font-medium">현재 대리티켓팅 신청이 가능합니다</span>
-                    <button type="button" data-action="quick-inquire" class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold bg-indigo-600 hover:bg-indigo-700 text-white transition">
-                      문의 · 접수하기
-                      <i data-lucide="arrow-right" class="w-3.5 h-3.5"></i>
-                    </button>
-                  </div>
-                `
-                : "";
+            const registrationLink = !isAdmin && openBookings.length && registrationUrl ? `
+              <a href="${escapeHtml(registrationUrl)}" target="_blank" rel="noopener noreferrer" class="inline-flex min-h-11 w-full sm:w-auto items-center justify-center gap-2 px-4 py-2 rounded-xl text-sm font-bold bg-indigo-600 hover:bg-indigo-700 text-white transition">
+                ${formUrl ? `${openBookings.join("·")} 접수 양식` : `카카오톡으로 ${openBookings.join("·")} 접수`}
+                <i data-lucide="arrow-up-right" class="w-4 h-4 shrink-0"></i>
+              </a>` : "";
+            const scheduleLink = !isAdmin && hasUnknownSchedule && twitterUrl ? `
+              <a href="${escapeHtml(twitterUrl)}" target="_blank" rel="noopener noreferrer" class="inline-flex min-h-11 w-full sm:w-auto items-center justify-center gap-1.5 px-3 py-2 rounded-xl border border-slate-200 bg-white hover:bg-slate-50 text-sm font-semibold text-slate-700 transition">
+                X에서 접수 공지 확인
+                <i data-lucide="arrow-up-right" class="w-4 h-4 shrink-0"></i>
+              </a>` : "";
 
             return `
-              <article class="rounded-2xl bg-white border border-slate-200/90 ${accentBorder} p-4 sm:p-5 shadow-xs hover:shadow-sm transition">
+              <article class="rounded-2xl bg-white border border-slate-200/90 p-3.5 sm:p-5 shadow-sm shadow-slate-900/5">
                 <div class="flex items-start justify-between gap-3">
                   <div class="min-w-0 space-y-1.5">
-                    <h3 class="text-sm sm:text-base font-extrabold text-slate-900 leading-snug break-words">${escapeHtml(c.title)}</h3>
+                    <h3 class="text-[15px] sm:text-lg font-extrabold text-slate-900 leading-snug break-words">${escapeHtml(c.title)}</h3>
                     ${metaTags.length ? `<div class="flex flex-wrap items-center gap-2">${metaTags.join("")}</div>` : ""}
                   </div>
                   ${adminControls}
                 </div>
 
-                <div class="mt-4 grid grid-cols-2 gap-2.5">
-                  <div class="rounded-xl bg-slate-50/90 border border-slate-100 px-3 py-2.5 flex items-center justify-between gap-2">
-                    <span class="text-xs font-bold text-slate-600 shrink-0">선예매</span>
-                    ${renderStatusPill(c.id, "presale", c.presale)}
-                  </div>
-                  <div class="rounded-xl bg-slate-50/90 border border-slate-100 px-3 py-2.5 flex items-center justify-between gap-2">
-                    <span class="text-xs font-bold text-slate-600 shrink-0">일반예매</span>
-                    ${renderStatusPill(c.id, "general", c.general)}
-                  </div>
+                <div class="mt-3 grid ${isAdmin ? "grid-cols-1 sm:grid-cols-2" : "grid-cols-2"} gap-2">
+                  ${bookings.map((booking) => renderBookingStatus(c.id, booking)).join("")}
                 </div>
 
                 ${c.note ? `<p class="mt-3 text-xs text-slate-500 flex items-start gap-1.5 leading-relaxed"><i data-lucide="info" class="w-3.5 h-3.5 text-slate-400 shrink-0 mt-0.5"></i><span>${escapeHtml(c.note)}</span></p>` : ""}
-                ${actionFooter}
+                ${registrationLink || scheduleLink ? `<div class="mt-3 flex flex-wrap gap-2">${registrationLink}${scheduleLink}</div>` : ""}
               </article>
             `;
           })
@@ -1062,8 +1112,9 @@
 
     // Channel link clicks
     function handleChannelClick(url, label) {
-      if (url && url.trim()) {
-        window.open(url.trim(), "_blank", "noopener,noreferrer");
+      const href = getPublicUrl(url);
+      if (href) {
+        window.open(href, "_blank", "noopener,noreferrer");
       } else if (isAdmin) {
         openSettingsModal();
         showToast(`${label} 링크를 입력해 주세요.`);
@@ -1078,14 +1129,11 @@
 
     // Filter tabs
     document.getElementById("filterTabs").addEventListener("click", (e) => {
-      const btn = e.target.closest(".filter-btn");
+      const btn = e.target.closest("button[data-filter]");
       if (!btn) return;
       activeFilter = btn.dataset.filter;
-      document.querySelectorAll(".filter-btn").forEach((el) => {
-        const active = el.dataset.filter === activeFilter;
-        el.className = active
-          ? "filter-btn px-3.5 py-1.5 rounded-full text-xs font-bold transition whitespace-nowrap bg-slate-900 text-white"
-          : "filter-btn px-3.5 py-1.5 rounded-full text-xs font-semibold transition whitespace-nowrap bg-white text-slate-600 border border-slate-200 hover:bg-slate-50";
+      document.querySelectorAll("#filterTabs button[data-filter]").forEach((el) => {
+        el.setAttribute("aria-pressed", String(el === btn));
       });
       render();
     });
@@ -1096,12 +1144,15 @@
     searchInput.addEventListener("input", () => {
       searchQuery = searchInput.value;
       clearSearchBtn.classList.toggle("hidden", !searchQuery);
+      clearSearchBtn.classList.toggle("grid", Boolean(searchQuery));
       render();
     });
     clearSearchBtn.addEventListener("click", () => {
       searchQuery = "";
       searchInput.value = "";
       clearSearchBtn.classList.add("hidden");
+      clearSearchBtn.classList.remove("grid");
+      searchInput.focus();
       render();
     });
 
@@ -1146,14 +1197,6 @@
           saveLocalState(true);
           render();
         }
-      } else if (action === "quick-inquire") {
-        if (state.formUrl) {
-          window.open(state.formUrl, "_blank", "noopener,noreferrer");
-        } else if (state.kakaoUrl) {
-          window.open(state.kakaoUrl, "_blank", "noopener,noreferrer");
-        } else {
-          showToast("상단의 카카오톡 또는 트위터(X)로 문의해 주세요.");
-        }
       }
     });
 
@@ -1162,10 +1205,13 @@
       document.getElementById("concertModalTitle").textContent = concert ? "공연 정보 수정" : "새 공연 추가";
       document.getElementById("editConcertId").value = concert ? concert.id : "";
       document.getElementById("inputTitle").value = concert ? concert.title : "";
+      document.getElementById("inputSearchAliases").value = concert?.searchAliases ?? "";
       document.getElementById("inputPlatform").value = concert ? concert.platform : "";
       document.getElementById("inputRounds").value = concert ? concert.rounds : "";
       document.getElementById("inputPresale").value = concert ? concert.presale : "open";
       document.getElementById("inputGeneral").value = concert ? concert.general : "open";
+      document.getElementById("inputPresaleOpensAt").value = concert?.presaleOpensAt ?? "";
+      document.getElementById("inputGeneralOpensAt").value = concert?.generalOpensAt ?? "";
       document.getElementById("inputNote").value = concert ? concert.note : "";
       document.getElementById("concertModal").classList.remove("hidden");
     }
@@ -1184,10 +1230,13 @@
       const payload = {
         id: id || "c_" + Date.now(),
         title: document.getElementById("inputTitle").value.trim(),
+        searchAliases: document.getElementById("inputSearchAliases").value.trim(),
         platform: document.getElementById("inputPlatform").value.trim(),
         rounds: document.getElementById("inputRounds").value.trim(),
         presale: document.getElementById("inputPresale").value,
         general: document.getElementById("inputGeneral").value,
+        presaleOpensAt: document.getElementById("inputPresaleOpensAt").value,
+        generalOpensAt: document.getElementById("inputGeneralOpensAt").value,
         note: document.getElementById("inputNote").value.trim()
       };
       if (!payload.title) return;
